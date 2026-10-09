@@ -19,6 +19,9 @@
 #include <linux/export.h>
 #include <linux/user_namespace.h>
 #include <linux/proc_ns.h>
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include "sched/pkg.h"
+#endif
 
 /*
  * userns count is 1 for root user, 1 for init_uts_ns,
@@ -103,6 +106,12 @@ struct user_struct root_user = {
 	.locked_shm     = 0,
 	.uid		= GLOBAL_ROOT_UID,
 	.ratelimit	= RATELIMIT_STATE_INIT(root_user.ratelimit, 0, 0),
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	.pkg = {
+		.lock = __RW_LOCK_UNLOCKED(root_user.pkg.lock),
+		.list = LIST_HEAD_INIT(root_user.pkg.list),
+	},
+#endif
 };
 
 /*
@@ -111,6 +120,10 @@ struct user_struct root_user = {
 static void uid_hash_insert(struct user_struct *up, struct hlist_head *hashent)
 {
 	hlist_add_head(&up->uidhash_node, hashent);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* The winning UID is visible and its history pin has a single owner. */
+	pkg_uid_register_locked(up);
+#endif
 }
 
 static void uid_hash_remove(struct user_struct *up)
@@ -161,6 +174,21 @@ struct user_struct *find_user(kuid_t uid)
 	return ret;
 }
 
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+void pkg_release_registered_user(struct user_struct *user)
+{
+	unsigned long flags;
+	bool retired;
+
+	/* Serialize retirement with UID publication/credential acquisition. */
+	spin_lock_irqsave(&uidhash_lock, flags);
+	retired = pkg_uid_retire_locked(user);
+	spin_unlock_irqrestore(&uidhash_lock, flags);
+	if (retired)
+		free_uid(user);
+}
+#endif
+
 void free_uid(struct user_struct *up)
 {
 	unsigned long flags;
@@ -179,6 +207,10 @@ struct user_struct *alloc_uid(kuid_t uid)
 
 	spin_lock_irq(&uidhash_lock);
 	up = uid_hash_find(uid, hashent);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	if (up)
+		pkg_uid_register_locked(up);
+#endif
 	spin_unlock_irq(&uidhash_lock);
 
 	if (!up) {
@@ -190,6 +222,10 @@ struct user_struct *alloc_uid(kuid_t uid)
 		refcount_set(&new->__count, 1);
 		ratelimit_state_init(&new->ratelimit, HZ, 100);
 		ratelimit_set_flags(&new->ratelimit, RATELIMIT_MSG_ON_RELEASE);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+		/* A losing allocation owns no registry pin, so ordinary free is safe. */
+		init_package_runtime_info(new);
+#endif
 
 		/*
 		 * Before adding this, check whether we raced
@@ -198,6 +234,9 @@ struct user_struct *alloc_uid(kuid_t uid)
 		spin_lock_irq(&uidhash_lock);
 		up = uid_hash_find(uid, hashent);
 		if (up) {
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+			pkg_uid_register_locked(up);
+#endif
 			kmem_cache_free(uid_cachep, new);
 		} else {
 			uid_hash_insert(new, hashent);

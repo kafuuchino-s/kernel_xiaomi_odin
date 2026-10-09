@@ -39,6 +39,10 @@ const char *migrate_type_names[] = {"GROUP_TO_RQ", "RQ_TO_GROUP",
 
 #define NEW_TASK_ACTIVE_TIME 100000000
 
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include <linux/pkg_stat.h>
+#endif
+
 static ktime_t ktime_last;
 static bool sched_ktime_suspended;
 static struct cpu_cycle_counter_cb cpu_cycle_counter_cb;
@@ -1512,6 +1516,14 @@ static inline u64 scale_exec_time(u64 delta, struct rq *rq)
 	return (delta * rq->wrq.task_exec_scale) >> 10;
 }
 
+#ifdef CONFIG_MIGT
+/* Stock get_scale_exec_time: same per-RQ scaling, typed for MIGT callers. */
+u64 get_scale_exec_time(u64 delta, int cpu)
+{
+	return scale_exec_time(delta, cpu_rq(cpu));
+}
+#endif
+
 /* Convert busy time to frequency equivalent
  * Assumes load is scaled to 1024
  */
@@ -2156,6 +2168,31 @@ static inline void run_walt_irq_work(u64 old_window_start, struct rq *rq)
 	}
 }
 
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+/* Stock walt+0xb10/0xc44: running intervals, capacity-scaled ns, IRQ on idle. */
+static void walt_update_pkg_runtime(struct task_struct *p, struct rq *rq,
+				  int event, u64 wallclock, u64 irqtime)
+{
+	u64 delta;
+
+	if (!p->wts.mark_start || wallclock <= p->wts.mark_start)
+		return;
+	if (is_idle_task(p)) {
+		if (event == PICK_NEXT_TASK)
+			return;
+		delta = irqtime;
+	} else {
+		if (event == PICK_NEXT_TASK || event == TASK_WAKE ||
+		    event == TASK_MIGRATE ||
+		    (event == TASK_UPDATE && rq->curr != p))
+			return;
+		delta = wallclock - p->wts.mark_start;
+	}
+	update_pkg_load(p, cpu_of(rq), PKG_TASK_BUSY, wallclock,
+			scale_exec_time(delta, rq));
+}
+#endif
+
 /* Reflect task activity on its demand and cpu's busy time statistics */
 void walt_update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 						u64 wallclock, u64 irqtime)
@@ -2181,6 +2218,10 @@ void walt_update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 	if (event == PUT_PREV_TASK && p->state)
 		p->wts.iowaited = p->in_iowait;
 
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* Capture the old mark_start before the done label advances it. */
+	walt_update_pkg_runtime(p, rq, event, wallclock, irqtime);
+#endif
 	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime,
 				&rq->wrq.grp_time);
 	trace_sched_update_task_ravg_mini(p, rq, event, wallclock, irqtime,

@@ -18,6 +18,10 @@
 #include <linux/sched/mm.h>
 #include <linux/sched/coredump.h>
 #include <linux/sched/user.h>
+
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include "sched/pkg.h"
+#endif
 #include <linux/sched/numa_balancing.h>
 #include <linux/sched/stat.h>
 #include <linux/sched/task.h>
@@ -1928,6 +1932,17 @@ static __latent_entropy struct task_struct *copy_process(
 		goto fork_out;
 
 	cpufreq_task_times_init(p);
+#ifdef CONFIG_PERF_CRITICAL_RT_TASK
+	p->critical_rt_task = 0;
+#endif
+#ifdef CONFIG_SF_BINDER
+	p->sf_binder_task = 0;
+#endif
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* A failed fork never inherits its parent's intrusive node or lock. */
+	INIT_LIST_HEAD(&p->pkg.list);
+	rwlock_init(&p->pkg.lock);
+#endif
 
 	/*
 	 * This _must_ happen before we call free_task(), i.e. before we jump
@@ -2302,6 +2317,10 @@ static __latent_entropy struct task_struct *copy_process(
 	uprobe_copy_process(p, clone_flags);
 
 	copy_oom_score_adj(clone_flags, p);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* No failure labels remain; the child has not been made runnable. */
+	pkg_task_attach(p, p->real_cred->user);
+#endif
 
 	return p;
 

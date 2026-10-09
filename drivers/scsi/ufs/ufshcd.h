@@ -77,9 +77,22 @@
 #define UFSHCD "ufshcd"
 #define UFSHCD_DRIVER_VERSION "0.2"
 
+/* Shared with the CLD worker; hba->ufshcd_state remains u32. */
+enum ufs_controller_state {
+	UFSHCD_STATE_RESET,
+	UFSHCD_STATE_ERROR,
+	UFSHCD_STATE_OPERATIONAL,
+	UFSHCD_STATE_EH_SCHEDULED_FATAL,
+	UFSHCD_STATE_EH_SCHEDULED_NON_FATAL,
+};
+
 #define UFSHCD_QUIRK_BROKEN_AUTO_HIBERN8                0x40000
 
 struct ufs_hba;
+
+#ifdef CONFIG_CLD
+#include "ufsfeatures/cld/mi_cld.h"
+#endif
 
 enum dev_cmd_type {
 	DEV_CMD_TYPE_NOP		= 0x0,
@@ -1050,6 +1063,9 @@ struct ufs_hba {
 	void *crypto_DO_NOT_USE[8];
 #endif /* CONFIG_SCSI_UFS_CRYPTO */
 
+#ifdef CONFIG_CLD
+	struct ufscld_dev cld;
+#endif
 	bool wb_buf_flush_enabled;
 	bool wb_enabled;
 	struct delayed_work rpm_dev_flush_recheck_work;
@@ -1544,4 +1560,6 @@ int ufshcd_uic_hibern8_enter(struct ufs_hba *hba);
 int ufshcd_uic_hibern8_exit(struct ufs_hba *hba);
 int ufshcd_read_string_desc(struct ufs_hba *hba, u8 desc_index,
 			    u8 **buf, bool ascii);
+void odin_ufs_device_added(struct scsi_device *sdev);
+void odin_ufs_device_removed(struct scsi_device *sdev);
 #endif /* End of Header */

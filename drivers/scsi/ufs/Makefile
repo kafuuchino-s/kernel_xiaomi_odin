@@ -6,6 +6,7 @@ obj-$(CONFIG_SCSI_UFS_CDNS_PLATFORM) += cdns-pltfrm.o
 obj-$(CONFIG_SCSI_UFS_QCOM) += ufs-qcom.o
 obj-$(CONFIG_SCSI_UFSHCD) += ufshcd-core.o
 ufshcd-core-y				+= ufshcd.o ufs-sysfs.o
+ufshcd-core-y				+= odin_oem_ufs.o
 ufshcd-core-$(CONFIG_SCSI_UFS_BSG)	+= ufs_bsg.o
 obj-$(CONFIG_SCSI_UFSHCD_PCI) += ufshcd-pci.o
 obj-$(CONFIG_SCSI_UFSHCD_PLATFORM) += ufshcd-pltfrm.o
@@ -16,3 +17,7 @@ ufshcd-qti-core-y		+= ufs-sysfs.o
 ufshcd-qti-core-$(CONFIG_SCSI_UFS_BSG)	+= ufs_bsg.o
 ufshcd-core-$(CONFIG_SCSI_UFS_CRYPTO) += ufshcd-crypto.o
 obj-$(CONFIG_SCSI_UFS_CRYPTO_QTI) += ufshcd-crypto-qti.o
+
+ufshcd-core-$(CONFIG_CLD) += ufsfeatures/cld/mi_cld.o \
+    ufsfeatures/cld/mi_cld_sysfs.o ufsfeatures/cld/samsung_cld.o \
+    ufsfeatures/cld/skhynix_cld.o

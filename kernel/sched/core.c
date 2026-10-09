@@ -7,6 +7,10 @@
  *  Copyright (C) 1991-2002  Linus Torvalds
  */
 #include "sched.h"
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include "pkg.h"
+#include <linux/pkg_stat.h>
+#endif
 
 #include <linux/nospec.h>
 
@@ -3079,6 +3083,9 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 
 	init_new_task_load(p);
 	__sched_fork(clone_flags, p);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	init_task_runtime_info(p);
+#endif
 	/*
 	 * We mark the process as NEW here. This guarantees that
 	 * nobody will actually run it, and a signal or other external
@@ -6408,6 +6415,10 @@ void init_idle(struct task_struct *idle, int cpu)
 	unsigned long flags;
 
 	__sched_fork(0, idle);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* init_idle() can repeat: retain its existing list membership and lock. */
+	init_task_runtime_info(idle);
+#endif
 
 	raw_spin_lock_irqsave(&idle->pi_lock, flags);
 	raw_spin_lock(&rq->lock);

@@ -463,6 +463,8 @@ config HAVE_SCHED_AVG_IRQ
 	depends on IRQ_TIME_ACCOUNTING || PARAVIRT_TIME_ACCOUNTING
 	depends on SMP
 
+source "kernel/sched/odin_oem.Kconfig"
+
 config SCHED_WALT
 	bool "Support window based load tracking"
 	depends on SMP

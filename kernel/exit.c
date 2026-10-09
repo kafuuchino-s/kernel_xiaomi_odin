@@ -11,6 +11,10 @@
 #include <linux/sched/mm.h>
 #include <linux/sched/stat.h>
 #include <linux/sched/task.h>
+
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include "sched/pkg.h"
+#endif
 #include <linux/sched/task_stack.h>
 #include <linux/sched/cputime.h>
 #include <linux/interrupt.h>
@@ -243,6 +247,10 @@ repeat:
 	/* don't need to get the RCU readlock here - the process is dead and
 	 * can't be modifying its own credentials. But shut RCU-lockdep up */
 	rcu_read_lock();
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* Unpublish before put_task_struct_rcu_user() can consume the last ref. */
+	pkg_task_detach(p, __task_cred(p)->user);
+#endif
 	atomic_dec(&__task_cred(p)->user->processes);
 	rcu_read_unlock();
 

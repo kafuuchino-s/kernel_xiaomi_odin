@@ -83,6 +83,7 @@ struct ipa_wdi_init_in_params {
 #endif
 	int inst_id;
 	bool ast_update;
+	bool is_hsp;
 };
 
 /**

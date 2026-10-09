@@ -109,6 +109,12 @@ struct task_struct init_task
 	RCU_POINTER_INITIALIZER(real_cred, &init_cred),
 	RCU_POINTER_INITIALIZER(cred, &init_cred),
 	.comm		= INIT_TASK_COMM,
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	.pkg = {
+		.lock = __RW_LOCK_UNLOCKED(init_task.pkg.lock),
+		.list = LIST_HEAD_INIT(init_task.pkg.list),
+	},
+#endif
 	.thread		= INIT_THREAD,
 	.fs		= &init_fs,
 	.files		= &init_files,
