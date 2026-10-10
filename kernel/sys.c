@@ -1,3 +1,4 @@
+#include <linux/odin_ksu_hooks.h>
 // SPDX-License-Identifier: GPL-2.0
 /*
  *  linux/kernel/sys.c
@@ -617,6 +618,8 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 	return __sys_setuid(uid);
 }
 
+#ifdef CONFIG_KSU_SUSFS
+#endif
 
 /*
  * This function implements a generic ability to update ruid, euid,
@@ -629,6 +632,7 @@ long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	struct cred *new;
 	int retval;
 	kuid_t kruid, keuid, ksuid;
+
 
 	kruid = make_kuid(ns, ruid);
 	keuid = make_kuid(ns, euid);
@@ -680,6 +684,11 @@ long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	if (retval < 0)
 		goto error;
 
+#ifdef CONFIG_KSU_SUSFS
+	ksu_handle_setresuid(from_kuid_munged(ns, new->uid),
+			     from_kuid_munged(ns, new->euid),
+			     from_kuid_munged(ns, new->suid));
+#endif
 	return commit_creds(new);
 
 error:
@@ -1240,12 +1249,20 @@ static int override_release(char __user *release, size_t len)
 	return ret;
 }
 
+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+extern struct static_key_false susfs_is_uname_spoof_buffer_set;
+extern void susfs_spoof_uname(struct new_utsname* tmp);
+#endif
 SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 {
 	struct new_utsname tmp;
 
 	down_read(&uts_sem);
 	memcpy(&tmp, utsname(), sizeof(tmp));
+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+	if (static_branch_likely(&susfs_is_uname_spoof_buffer_set))
+		susfs_spoof_uname(&tmp);
+#endif
 	up_read(&uts_sem);
 	if (copy_to_user(name, &tmp, sizeof(tmp)))
 		return -EFAULT;

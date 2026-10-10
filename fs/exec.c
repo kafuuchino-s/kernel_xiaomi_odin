@@ -1,3 +1,4 @@
+#include <linux/odin_ksu_hooks.h>
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  *  linux/fs/exec.c
@@ -66,6 +67,9 @@
 #include <linux/sched.h>
 
 #include <linux/uaccess.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+#endif
 #include <asm/mmu_context.h>
 #include <asm/tlb.h>
 
@@ -1761,6 +1765,12 @@ static int exec_binprm(struct linux_binprm *bprm)
 /*
  * sys_execve() executes a new program.
  */
+#ifdef CONFIG_KSU_SUSFS
+extern struct static_key_true ksu_su_compat_enabled;
+extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
+extern bool __ksu_is_allow_uid_for_current(uid_t uid);
+#endif
+
 static int __do_execve_file(int fd, struct filename *filename,
 			    struct user_arg_ptr argv,
 			    struct user_arg_ptr envp,
@@ -1771,8 +1781,17 @@ static int __do_execve_file(int fd, struct filename *filename,
 	struct files_struct *displaced;
 	int retval;
 
+#ifdef CONFIG_KSU_SUSFS
+	/* Every attempt clears stale state, including rejected/disabled paths. */
+	clear_thread_flag(TIF_PROC_IN_KSU_EXECVE);
+#endif
 	if (IS_ERR(filename))
 		return PTR_ERR(filename);
+#ifdef CONFIG_KSU_SUSFS
+	if (filename && !file && !susfs_is_current_proc_no_su() &&
+	    static_branch_likely(&ksu_su_compat_enabled))
+		ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
+#endif
 
 	/*
 	 * We move the actual failure in case of RLIMIT_NPROC excess from
@@ -1883,6 +1902,11 @@ static int __do_execve_file(int fd, struct filename *filename,
 	if (retval < 0)
 		goto out;
 
+#ifdef CONFIG_KSU_SUSFS
+	/* Successful exec, filename still owned. Root consumes marker once. */
+	ksu_handle_post_execve(&fd, filename ? filename->name : NULL,
+			      &argv, &envp, &flags, &retval);
+#endif
 	/* execve succeeded */
 	current->fs->in_exec = 0;
 	current->in_execve = 0;
@@ -1919,6 +1943,8 @@ out_ret:
 		putname(filename);
 	return retval;
 }
+
+
 
 static int do_execveat_common(int fd, struct filename *filename,
 			      struct user_arg_ptr argv,
