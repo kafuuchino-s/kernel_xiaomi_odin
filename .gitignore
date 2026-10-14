@@ -156,3 +156,6 @@ arch/*/configs/vendor/*_defconfig
 # vendor device tree directories
 arch/arm64/boot/dts/vendor
 #arch/arm/boot/dts/vendor
+
+# Build output (build.sh requires OUT inside the tree for reproducibility)
+/out/

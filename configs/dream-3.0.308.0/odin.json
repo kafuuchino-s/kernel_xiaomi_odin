@@ -49,6 +49,14 @@
   "kbuild_kcflags": "-Wno-error -Werror=incompatible-pointer-types",
   "targets": ["Image", "modules"],
 
+  "reproducibility": {
+    "required": true,
+    "note": "The Image must be byte-identical wherever the tree and the output directory live. Without this, a hash recorded in a release manifest cannot be reproduced from a fresh clone.",
+    "mechanism": "clang leaks the build location twice: it records the compile working directory in every object (feeding the ThinLTO module hash), and it writes the source path exactly as given into the object's section names. Prefix maps rewrite the first but not the second, so what decides whether two builds agree is whether those strings are equal. With the output directory inside the tree, kbuild sets srctree=\"..\" and passes a relative source path, identical everywhere; build.sh then maps both the tree root and the output directory to fixed strings with -fdebug-prefix-map and -ffile-prefix-map, on KAFLAGS as well as KCFLAGS because assembly does not pass through KBUILD_CFLAGS.",
+    "constraint": "OUT must be inside the tree. An out-of-tree O= always passes absolute source paths and cannot be made reproducible with this toolchain; build.sh refuses it rather than producing a hash that only matches on one machine.",
+    "verify": "Build the same commit from two different tree paths into two differently-named output directories; Image and Module.symvers sha256 must match."
+  },
+
   "base_commit": "05d251c8fc35d26e0f3143da56c3990c66f53303",
   "base_upstream": "Inkypen79/kernel_xiaomi_odin lineage-19.1 (Linux 5.4.259)",
 

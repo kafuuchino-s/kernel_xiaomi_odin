@@ -80,8 +80,43 @@ grep -q "^CONFIG_STACKPROTECTOR_PER_TASK=y" "$OUT/.config" && { echo "STACKPROTE
 grep -Fxq "CONFIG_LOCALVERSION=\"$(read_recipe banner.localversion)\"" "$OUT/.config" || { echo "LOCALVERSION wrong" >&2; exit 5; }
 
 # ---- 7. build ------------------------------------------------------------
+# Reproducibility. The Image must not depend on where the tree and the output
+# directory live, or a hash recorded in a release manifest cannot be reproduced
+# from a clone.
+#
+# clang leaks the build location twice: it records the compile working directory
+# in every object (that feeds the ThinLTO module hash), and it writes the source
+# path exactly as given into the object's section names - "SRC/init/calibrate.c
+# .init.text". Prefix maps rewrite the first but not the second, so what decides
+# whether two builds agree is whether those two strings are the same on both
+# machines.
+#
+#   * Source path. An out-of-tree build (O= outside the tree) always passes an
+#     absolute path and can never be reproduced here. With O= inside the tree,
+#     kbuild sets srctree=".." and passes "../init/calibrate.c", which is the
+#     same string wherever the tree lives.
+#   * Output path. Once OUT is inside the tree, its path relative to the tree is
+#     what gets recorded, so the directory *name* matters too. Mapping it
+#     removes that.
+#
+# Hence both mappings below. KAFLAGS as well as KCFLAGS, because assembly does
+# not go through KBUILD_CFLAGS and the assembler embeds its source path too (it
+# shows up as the arch/arm64/kernel/entry.S string in Image).
+case "$OUT/" in
+    "$ROOT"/*) : ;;
+    *) echo "OUT must be inside the source tree for a reproducible build." >&2
+       echo "  ROOT=$ROOT" >&2
+       echo "  OUT =$OUT" >&2
+       echo "An out-of-tree O= makes clang embed absolute source paths in section names." >&2
+       exit 7 ;;
+esac
+
+PREFIX_MAPS="-fdebug-prefix-map=$OUT=/build/out -ffile-prefix-map=$OUT=/build/out"
+PREFIX_MAPS="$PREFIX_MAPS -fdebug-prefix-map=$ROOT=/build/src -ffile-prefix-map=$ROOT=/build/src"
+
 make -C "$ROOT" O="$OUT" "${ARGS[@]}" \
-     KCFLAGS="$(read_recipe kbuild_kcflags)" -j"$(nproc)" \
+     KCFLAGS="$(read_recipe kbuild_kcflags) $PREFIX_MAPS" \
+     KAFLAGS="$PREFIX_MAPS" -j"$(nproc)" \
      $(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]))['targets']))" "$RECIPE")
 
 # ---- 8. verify the banner ------------------------------------------------
