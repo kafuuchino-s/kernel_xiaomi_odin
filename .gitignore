@@ -36,6 +36,9 @@
 *.o
 *.o.*
 *.patch
+
+# mix4: keep the BakaSU 5.4 glue patch tracked (see kernel-patches/)
+!kernel-patches/*.patch
 *.s
 *.so
 *.so.dbg

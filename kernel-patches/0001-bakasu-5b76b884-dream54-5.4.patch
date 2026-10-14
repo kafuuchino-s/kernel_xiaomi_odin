@@ -1,0 +1,480 @@
+diff --git a/kernel/Kbuild b/kernel/Kbuild
+index b7655cb3a..dc188f5eb 100644
+--- a/kernel/Kbuild
++++ b/kernel/Kbuild
+@@ -40,8 +40,8 @@ ifdef CONFIG_ARM64
+ kernelsu-objs += compat/apatch_conflict.o
+ endif
+ 
+-ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-missing-prototypes
+-ccflags-y += $(call cc-disable-warning, int-conversion)
++ccflags-y += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Wno-strict-prototypes -Wno-missing-prototypes
++
+ ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-unused-variable -Wno-missing-braces
+ ccflags-y += -Wno-int-to-pointer-cast -Wno-declaration-after-statement
+ 
+diff --git a/kernel/Kconfig b/kernel/Kconfig
+index 79bc79eee..30276ca37 100644
+--- a/kernel/Kconfig
++++ b/kernel/Kconfig
+@@ -103,7 +103,7 @@ config KSU_MANUAL_HOOK
+ 
+ config KSU_SUSFS
+ 	bool "SUSFS Inline Hook"
+-	depends on THREAD_INFO_IN_TASK && 64BIT
++	depends on KSU = y && ARM64 && THREAD_INFO_IN_TASK
+ 	help
+ 	  Patch and Enable SUSFS to kernel with KernelSU.
+ 	  SuSFS Officially support kernel 5.10+
+@@ -157,93 +157,4 @@ config KSU_MANUAL_HOOK_AUTO_INPUT_HOOK
+ 
+ endmenu
+ 
+-menu "KernelSU - SUSFS"
+-    depends on KSU_SUSFS
+-
+-comment "------------------------WARNING-------------------------------"
+-comment "BakaSU will check EVERY hooks in kernel compile process"
+-comment "If anything mismatch with simonpunk's patch, Kernel compile maybe FAILED!"
+-comment "See simonpunk's original patch if you face any compile failed due to hook check"
+-comment "Repo: https://gitlab.com/simonpunk/susfs4ksu"
+-comment "--------------------------------------------------------------"
+-config KSU_SUSFS_SUS_PATH
+-    bool "Enable to hide suspicious path"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow hiding the user-defined path and all its sub-paths from various system calls.
+-        - Use "add_sus_path_loop" instead of "add_sus_path" if the user-defined path is frequently modified.
+-        - Use with caution, as it may cause performance loss and be vulnerable to side-channel attacks.
+-          just disable this feature if it doesn't work for you or you don't need it at all.
+-        - Effective only on zygote spawned user app process with uid >= 10000.
+-
+-config KSU_SUSFS_SUS_MOUNT
+-    bool "Enable to hide suspicious mounts"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Automatically assign fake mnt_id and fake mnt_group_id for mounts mounted by ksu process until /sdcard is decrypted, this is to evade from mnt_id/mnt_group_id gap detections.
+-        - Allow hiding all sus mounts from /proc/self/[mounts|mountinfo|mountstat] for non-su processes.
+-
+-config KSU_SUSFS_SUS_KSTAT
+-    bool "Enable to spoof suspicious kstat"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow spoofing the kstat of user-defined file/directory.
+-        - Effective only on zygote spawned user app process with uid >= 10000.
+-
+-config KSU_SUSFS_SPOOF_UNAME
+-    bool "Enable to spoof uname"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow spoofing the string returned by uname syscall to user-defined string.
+-        - Effective on all processes.
+-
+-config KSU_SUSFS_ENABLE_LOG
+-    bool "Enable logging susfs log to kernel"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow logging susfs log to kernel, uncheck it to completely disable all susfs log.
+-
+-config KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+-    bool "Enable to automatically hide ksu and susfs symbols from /proc/kallsyms"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Automatically hide ksu and susfs symbols from '/proc/kallsyms'.
+-        - Effective on all processes.
+-
+-config KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+-    bool "Enable to spoof /proc/bootconfig (gki) or /proc/cmdline (non-gki)"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Spoof the output of /proc/bootconfig (gki) or /proc/cmdline (non-gki) with a user-defined file.
+-        - Effective on all processes.
+-
+-config KSU_SUSFS_OPEN_REDIRECT
+-    bool "Enable to redirect a path to be opened with another path (experimental)"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow redirecting a target path to be opened with another user-defined path.
+-        - Please be reminded that process with open access to the target and redirected path can be detected.
+-        - Effective only on processes with uid < 2000.
+-
+-config KSU_SUSFS_SUS_MAP
+-    bool "Enable hiding some mmapped real files from different proc maps interfaces"
+-    depends on KSU_SUSFS
+-    default y
+-    help
+-        - Allow hiding mmapped real files from /proc/<pid>/[maps|smaps|smaps_rollup|map_files|mem|pagemap]
+-        - It does NOT support hiding anon memory.
+-        - It does NOT hide any inline hooks or PLT hooks caused by the injected library itself.
+-        - It may not be able to evade detections by apps that implement a good injection detection.
+-        - Effective only on zygote spawned umounted user app process >= 10000.
+-
+-endmenu
+-
+ endmenu
+diff --git a/kernel/compat/kernel_compat.c b/kernel/compat/kernel_compat.c
+index 0ef3eb36f..b5373eb5b 100644
+--- a/kernel/compat/kernel_compat.c
++++ b/kernel/compat/kernel_compat.c
+@@ -92,8 +92,8 @@ __weak int path_mount(const char *dev_name, struct path *path, const char *type_
+     // -1 on the size as implicit null termination
+     // as we zero init the thing
+     char *realpath = d_path(path, buf, sizeof(buf) - 1);
+-    if (!(realpath && realpath != buf))
+-        return -ENOENT;
++    if (IS_ERR(realpath))
++        return PTR_ERR(realpath);
+ 
+     old_fs = get_fs();
+     set_fs(KERNEL_DS);
+diff --git a/kernel/core/init.c b/kernel/core/init.c
+index 15e34108c..ab0050611 100644
+--- a/kernel/core/init.c
++++ b/kernel/core/init.c
+@@ -306,6 +306,10 @@ void __exit kernelsu_exit(void)
+     if (!ksu_late_loaded)
+         ksu_ksud_exit();
+ 
++#ifdef CONFIG_KSU_SUSFS
++    susfs_shutdown();
++#endif
++
+     // Wait for any in-flight RCU readers (e.g. handler traversing allow_list)
+     synchronize_rcu();
+ 
+diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
+index 612de60f9..2ee9700ef 100644
+--- a/kernel/feature/selinux_hide.c
++++ b/kernel/feature/selinux_hide.c
+@@ -338,7 +338,7 @@ extern setprocattr_fn ksu_orig_setprocattr;
+ #endif
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0) || defined(KSU_COMPAT_SETPROCATTR_USE_NEW_PROTOTYPE)
+-int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t size)
++int ksu_handle_selinux_setprocattr(const char *name, void *value, size_t size)
+ #else
+ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
+ #endif
+diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
+index 8dbbd847a..6dce0ed0e 100644
+--- a/kernel/feature/sucompat.c
++++ b/kernel/feature/sucompat.c
+@@ -1,3 +1,4 @@
++#include <linux/odin_ksu_hooks.h>
+ #include <linux/version.h>
+ #include <linux/preempt.h>
+ #include <linux/mm.h>
+@@ -31,6 +32,7 @@
+ #include "policy/feature.h"
+ #include "klog.h" // IWYU pragma: keep
+ #include "runtime/ksud.h"
++#include "selinux/selinux.h"
+ #include "feature/sucompat.h"
+ #include "policy/app_profile.h"
+ #include "supercall/supercall.h"
+@@ -392,7 +394,7 @@ out:
+ // fd, filename, argv, envp, flags and retval were NOT provided in bprm_committed_creds (KSU_COMPAT_NO_POST_EXECVE_HOOK)!
+ int ksu_handle_post_execve(int *fd, const char *filename, void *argv, void *envp, int *flags, int *retval)
+ {
+-    if (likely(!test_thread_flag(TIF_PROC_IN_KSU_EXECVE))) {
++    if (likely(!test_and_clear_thread_flag(TIF_PROC_IN_KSU_EXECVE))) {
+         return -EINVAL;
+     }
+ #ifndef KSU_COMPAT_HAS_SUSFS_INSTALL_SU_FD_DIRECT_CALL
+@@ -436,6 +438,7 @@ static inline void ksu_handle_execveat_init(const char *filename, void *envp)
+ int ksu_handle_execve(int *fd, const char *filename, void *argv, void *envp, int *flags)
+ {
+     struct ksu_sulog_pending_event *pending_root_execve = NULL;
++    clear_thread_flag(TIF_PROC_IN_KSU_EXECVE);
+ 
+ #ifndef CONFIG_KSU_TRACEPOINT_HOOK
+     if (ksu_is_current_proc_unprivillege()) {
+diff --git a/kernel/hook/arm64/patch_memory.c b/kernel/hook/arm64/patch_memory.c
+index 1ab6befec..eb3047468 100644
+--- a/kernel/hook/arm64/patch_memory.c
++++ b/kernel/hook/arm64/patch_memory.c
+@@ -286,7 +286,7 @@ static int ksu_patch_text_nosync(void *dst, void *src, size_t len, int flags)
+     }
+     pr_info("phy addr for patch 0x%lx: 0x%lx\n", p, phy);
+ 
+-    void *map = set_fixmap_offset(FIX_TEXT_POKE0, phy);
++    void *map = (void *)set_fixmap_offset(FIX_TEXT_POKE0, phy);
+     pr_info("fixmap addr for patch 0x%lx: 0x%lx\n", p, (unsigned long)map);
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+diff --git a/kernel/hook/setuid_hook.c b/kernel/hook/setuid_hook.c
+index 7eb2de3f5..e08c633f0 100644
+--- a/kernel/hook/setuid_hook.c
++++ b/kernel/hook/setuid_hook.c
+@@ -1,3 +1,4 @@
++#include <linux/odin_ksu_hooks.h>
+ #include <linux/compiler.h>
+ #include <linux/version.h>
+ #include <linux/slab.h>
+@@ -13,6 +14,8 @@
+ #include <linux/uaccess.h>
+ #include <linux/uidgid.h>
+ #include <linux/namei.h>
++#include <linux/mount.h>
++#include "selinux/selinux.h"
+ 
+ #include "policy/app_profile.h"
+ #include "policy/allowlist.h"
+diff --git a/kernel/infra/symbol_resolver.c b/kernel/infra/symbol_resolver.c
+index 1fb4d7c68..e7fb4b7bb 100644
+--- a/kernel/infra/symbol_resolver.c
++++ b/kernel/infra/symbol_resolver.c
+@@ -26,8 +26,13 @@ static const size_t cfi_suffix_len = sizeof(cfi_suffix) - 1;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+ #define ALWAYS_HAVE_ON_EACH_SYMBOL 1
+ #else
++#if !defined(MODULE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
++/* Builtin 5.4 has the declared callback API: keep typed CFI calls. */
++#define ALWAYS_HAVE_ON_EACH_SYMBOL 1
++#else
+ #define ALWAYS_HAVE_ON_EACH_SYMBOL 0
+ #endif
++#endif
+ 
+ #if !ALWAYS_HAVE_ON_EACH_SYMBOL
+ static int (*kallsyms_on_each_symbol_fn)(int (*fn)(void *, const char *, struct module *, unsigned long),
+@@ -56,7 +61,7 @@ struct ksu_lookup_symbol_ctx {
+     void *match;
+ };
+ 
+-unsigned long __nocfi find_kernel_symbol_exact(const char *symbol_name)
++unsigned long find_kernel_symbol_exact(const char *symbol_name)
+ {
+     unsigned long addr = 0;
+ #if HAVE_ON_EACH_MATCH_SYMBOL
+@@ -122,7 +127,7 @@ static int lookup_symbol_variant_cb(void *data, const char *name, struct module
+     return 0;
+ }
+ 
+-static __nocfi void *resolve_symbol_variant(const char *symbol_name, size_t symbol_len)
++static void *resolve_symbol_variant(const char *symbol_name, size_t symbol_len)
+ {
+     struct ksu_lookup_symbol_ctx ctx = {
+         .symbol_name = symbol_name,
+diff --git a/kernel/manager/throne_tracker.h b/kernel/manager/throne_tracker.h
+index 49c02e211..24d20da1a 100644
+--- a/kernel/manager/throne_tracker.h
++++ b/kernel/manager/throne_tracker.h
+@@ -1,6 +1,9 @@
+ #ifndef __KSU_H_THRONE_TRACKER
+ #define __KSU_H_THRONE_TRACKER
+ 
++struct dentry;
++void ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry);
++
+ #define TRACK_THRONE_PRUNE_ONLY (1 << 0)
+ #define TRACK_THRONE_FROM_RENAMEAT (1 << 1)
+ #define TRACK_THRONE_FORCE_SYNCHRONOUS (1 << 2)
+diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
+index 393347354..0207efaf8 100644
+--- a/kernel/runtime/ksud_integration.c
++++ b/kernel/runtime/ksud_integration.c
+@@ -1,3 +1,4 @@
++#include <linux/odin_ksu_hooks.h>
+ #include "feature/selinux_hide.h"
+ #include <linux/rcupdate.h>
+ #include <linux/slab.h>
+@@ -679,10 +680,14 @@ void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_pt
+ 
+ #endif
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr)
+ {
+-    struct file *file = fget(fd);
++    struct file *file;
++
++    if (ksu_init_rc_hook_inactive() || !is_init(current_cred()))
++        return;
++    file = fget(fd);
+ 
+     if (!file)
+         return;
+@@ -767,15 +772,10 @@ static void ksu_handle_sys_read_fd(unsigned int fd)
+ }
+ #endif
+ 
+-int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr, size_t *count_ptr)
++void ksu_handle_sys_read(unsigned int fd)
+ {
+-#ifdef CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK
+-    return 0; // dummy hook here
+-#else
+-
++#ifndef CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK
+     ksu_handle_sys_read_fd(fd);
+-
+-    return 0;
+ #endif
+ }
+ 
+@@ -998,7 +998,7 @@ static long ksu_sys_read(const struct pt_regs *regs)
+     char __user **buf_ptr = (char __user **)&PT_REGS_PARM2(regs);
+     size_t *count_ptr = (size_t *)&PT_REGS_PARM3(regs);
+ 
+-    ksu_handle_sys_read(fd, buf_ptr, count_ptr);
++    ksu_handle_sys_read(fd);
+     return orig_sys_read(regs);
+ }
+ 
+diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
+index 95373100c..120f4cf10 100644
+--- a/kernel/supercall/dispatch.c
++++ b/kernel/supercall/dispatch.c
+@@ -4,6 +4,7 @@
+ #include <linux/kprobes.h>
+ #include <linux/syscalls.h>
+ #include <linux/uaccess.h>
++#include <linux/atomic.h>
+ #include <linux/version.h>
+ #ifdef CONFIG_KSU_SUSFS
+ #include <linux/susfs_def.h>
+@@ -17,6 +18,10 @@
+ #include "policy/feature.h"
+ #include "klog.h" // IWYU pragma: keep
+ #include "runtime/ksud.h"
++#include "runtime/ksud_boot.h"
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
++#endif
+ #include "feature/kernel_umount.h"
+ #include "compat/kernel_compat.h"
+ #include "manager/manager_identity.h"
+@@ -138,7 +143,7 @@ static int do_get_info_legacy(void __user *arg)
+ 
+ static int do_report_event(void __user *arg)
+ {
+-    static bool services_started = false;
++    static atomic_t services_started = ATOMIC_INIT(0);
+     struct ksu_report_event_cmd cmd;
+ 
+     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+@@ -147,12 +152,11 @@ static int do_report_event(void __user *arg)
+ 
+     switch (cmd.event) {
+     case EVENT_POST_FS_DATA: {
+-        static bool post_fs_data_lock = false;
++        static atomic_t post_fs_data_lock = ATOMIC_INIT(0);
+ 
+         // Reset for emulated soft reboot
+-        services_started = false;
+-        if (!post_fs_data_lock) {
+-            post_fs_data_lock = true;
++        atomic_set(&services_started, 0);
++        if (!atomic_xchg(&post_fs_data_lock, 1)) {
+             if (ksu_late_loaded) {
+                 pr_info("post-fs-data skipped (late load)\n");
+             } else {
+@@ -163,19 +167,20 @@ static int do_report_event(void __user *arg)
+         break;
+     }
+     case EVENT_BOOT_COMPLETED: {
+-        static bool boot_complete_lock = false;
+-        if (!boot_complete_lock) {
+-            boot_complete_lock = true;
++        static atomic_t boot_complete_lock = ATOMIC_INIT(0);
++        if (!atomic_xchg(&boot_complete_lock, 1)) {
+             if (ksu_late_loaded) {
+                 pr_info("boot_complete skipped (late load)\n");
+             } else {
+                 pr_info("boot_complete triggered\n");
+                 on_boot_completed();
+-#ifdef CONFIG_KSU_SUSFS
+-                susfs_start_sdcard_monitor_fn();
+-#endif
+             }
+         }
++#ifdef CONFIG_KSU_SUSFS
++        /* Boot handler runs once; a later privileged event may retry setup. */
++        if (!ksu_late_loaded)
++            susfs_start_sdcard_monitor_fn();
++#endif
+         break;
+     }
+     case EVENT_MODULE_MOUNTED: {
+@@ -184,11 +189,10 @@ static int do_report_event(void __user *arg)
+         break;
+     }
+     case EVENT_SERVICES: {
+-        if (services_started) {
++        if (atomic_xchg(&services_started, 1)) {
+             pr_info("services already started, skipping\n");
+             return 0;
+         }
+-        services_started = true;
+         pr_info("services triggered\n");
+         return 1;
+     }
+@@ -1085,7 +1089,7 @@ int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg)
+         return 0;
+     }
+     }
+-    return 0;
++    return -EOPNOTSUPP;
+ }
+ #endif
+ 
+diff --git a/kernel/supercall/supercall.c b/kernel/supercall/supercall.c
+index ca43b5a3d..bdf57789b 100644
+--- a/kernel/supercall/supercall.c
++++ b/kernel/supercall/supercall.c
+@@ -1,3 +1,4 @@
++#include <linux/odin_ksu_hooks.h>
+ #include <linux/anon_inodes.h>
+ #include <linux/err.h>
+ #include <linux/fdtable.h>
+@@ -143,7 +144,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user
+     // other sys_reboot extensions are fully require uid 0,
+     // so let's check it before
+     if (ksu_get_uid_t(current_uid()) != 0)
+-        return 0;
++        return -EPERM;
+ 
+ #ifdef CONFIG_KSU_TOOLKIT_SUPPORT
+     if (ksu_try_handle_toolkit_cmd(magic2, cmd, arg))
+diff --git a/kernel/tools/kernel_compat.mk b/kernel/tools/kernel_compat.mk
+index 57504d06a..bad8cedf9 100644
+--- a/kernel/tools/kernel_compat.mk
++++ b/kernel/tools/kernel_compat.mk
+@@ -296,9 +296,10 @@ $(info -- $(REPO_NAME)/compat: module.h found)
+ ccflags-y += -DKSU_COMPAT_HAS_UAPI_MODULE_H
+ endif
+ 
+-# optional hook
+-ifneq ($(shell grep -q "ksu_handle_post_execve" $(srctree)/fs/exec.c; echo $$?),0)
+-$(info -- $(REPO_NAME)/compat: ksu_handle_post_execve hook not found)
++# Dream integration owns actual common post-exec paths in both inline modes.
++ifneq ($(filter y,$(CONFIG_KSU_MANUAL_HOOK) $(CONFIG_KSU_SUSFS)),)
++$(info -- $(REPO_NAME)/compat: configured Dream inline post-exec; verified in compiled IR)
++else
+ ccflags-y += -DKSU_COMPAT_NO_POST_EXECVE_HOOK
+ endif
+ 
+diff --git a/kernel/tools/manual_hook_check.mk b/kernel/tools/manual_hook_check.mk
+index 1c58afb50..b309e66af 100644
+--- a/kernel/tools/manual_hook_check.mk
++++ b/kernel/tools/manual_hook_check.mk
+@@ -73,8 +73,7 @@ endif
+ 
+ $(eval $(call check_ksu_hook,ksu_handle_faccessat,$(srctree)/fs/open.c))
+ $(eval $(call check_ksu_hook,ksu_handle_stat,$(srctree)/fs/stat.c))
+-$(eval $(call check_ksu_hook,ksu_handle_newfstat_ret,$(srctree)/fs/stat.c))
+-$(eval $(call check_ksu_hook,ksu_handle_fstat64_ret,$(srctree)/fs/stat.c))
++$(eval $(call check_ksu_hook,ksu_handle_vfs_fstat,$(srctree)/fs/stat.c))
+ 
+ ifeq ($(shell test \( $(VERSION) -lt 3 -o \( $(VERSION) -eq 3 -a $(PATCHLEVEL) -le 11 \) \) && echo y),y)
+   # https://github.com/torvalds/linux/commit/15d94b82565ebfb0cf27830b96e6cf5ed2d12a9a
