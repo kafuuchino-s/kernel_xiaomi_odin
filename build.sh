@@ -85,7 +85,7 @@ make -C "$ROOT" O="$OUT" "${ARGS[@]}" \
      $(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]))['targets']))" "$RECIPE")
 
 # ---- 8. verify the banner ------------------------------------------------
-EXPECTED="$(read_recipe banner)"
+EXPECTED="$(read_recipe banner.uts_release)"
 ACTUAL="$(sed -n 's/^#define UTS_RELEASE "\(.*\)"$/\1/p' "$OUT/include/generated/utsrelease.h")"
 echo "UTS_RELEASE: $ACTUAL"
 [ "$ACTUAL" = "$EXPECTED" ] || { echo "BANNER MISMATCH: expected $EXPECTED" >&2; exit 6; }
