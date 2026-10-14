@@ -1768,7 +1768,6 @@ static int exec_binprm(struct linux_binprm *bprm)
 #ifdef CONFIG_KSU_SUSFS
 extern struct static_key_true ksu_su_compat_enabled;
 extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
-extern bool __ksu_is_allow_uid_for_current(uid_t uid);
 #endif
 
 static int __do_execve_file(int fd, struct filename *filename,

@@ -1,5 +1,5 @@
 diff --git a/kernel/Kbuild b/kernel/Kbuild
-index b7655cb3a49077678ef7055ee5fd6cb6a0b44b5d..dc188f5eb9a9f91e9834fcd20043d232f98ef2ae 100644
+index b7655cb3..dc188f5e 100644
 --- a/kernel/Kbuild
 +++ b/kernel/Kbuild
 @@ -40,8 +40,8 @@ ifdef CONFIG_ARM64
@@ -14,7 +14,7 @@ index b7655cb3a49077678ef7055ee5fd6cb6a0b44b5d..dc188f5eb9a9f91e9834fcd20043d232
  ccflags-y += -Wno-int-to-pointer-cast -Wno-declaration-after-statement
  
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 79bc79eee88807a19a24807e2c1e8eafab5f1591..30276ca378bc5181f61059be1a248a7913c7d7f4 100644
+index 79bc79ee..30276ca3 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -103,7 +103,7 @@ config KSU_MANUAL_HOOK
@@ -121,7 +121,7 @@ index 79bc79eee88807a19a24807e2c1e8eafab5f1591..30276ca378bc5181f61059be1a248a79
 -
  endmenu
 diff --git a/kernel/compat/kernel_compat.c b/kernel/compat/kernel_compat.c
-index 0ef3eb36fd54f6cd0289f1346fabc2a3905f4706..b5373eb5b34f7cffc6ed55bf08b5ad97a21b3be7 100644
+index 0ef3eb36..b5373eb5 100644
 --- a/kernel/compat/kernel_compat.c
 +++ b/kernel/compat/kernel_compat.c
 @@ -92,8 +92,8 @@ __weak int path_mount(const char *dev_name, struct path *path, const char *type_
@@ -136,7 +136,7 @@ index 0ef3eb36fd54f6cd0289f1346fabc2a3905f4706..b5373eb5b34f7cffc6ed55bf08b5ad97
      old_fs = get_fs();
      set_fs(KERNEL_DS);
 diff --git a/kernel/core/init.c b/kernel/core/init.c
-index 15e34108c03a54955bcc4afb8477c8484ca7c723..ab00506112e8b9de44ce70b15ff6313c9e6834c8 100644
+index 15e34108..ab005061 100644
 --- a/kernel/core/init.c
 +++ b/kernel/core/init.c
 @@ -306,6 +306,10 @@ void __exit kernelsu_exit(void)
@@ -151,10 +151,10 @@ index 15e34108c03a54955bcc4afb8477c8484ca7c723..ab00506112e8b9de44ce70b15ff6313c
      synchronize_rcu();
  
 diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
-index 612de60f9a9fefced88c904025769de941547986..2ee9700efb4848323e3105d07bbcc14b8e49fe45 100644
+index 549c42a5..23bc83bc 100644
 --- a/kernel/feature/selinux_hide.c
 +++ b/kernel/feature/selinux_hide.c
-@@ -338,7 +338,7 @@ extern setprocattr_fn ksu_orig_setprocattr;
+@@ -444,7 +444,7 @@ extern setprocattr_fn ksu_orig_setprocattr;
  #endif
  
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0) || defined(KSU_COMPAT_SETPROCATTR_USE_NEW_PROTOTYPE)
@@ -164,7 +164,7 @@ index 612de60f9a9fefced88c904025769de941547986..2ee9700efb4848323e3105d07bbcc14b
  int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
  #endif
 diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
-index 8dbbd847a0e059397f96351e4fef124b775b169c..78d11cb464450f78ce1e7b91e45af43c8711307e 100644
+index 42e01ebf..6e4b71a7 100644
 --- a/kernel/feature/sucompat.c
 +++ b/kernel/feature/sucompat.c
 @@ -22,7 +22,6 @@
@@ -183,7 +183,7 @@ index 8dbbd847a0e059397f96351e4fef124b775b169c..78d11cb464450f78ce1e7b91e45af43c
  #include "feature/sucompat.h"
  #include "policy/app_profile.h"
  #include "supercall/supercall.h"
-@@ -392,7 +392,7 @@ out:
+@@ -393,7 +393,7 @@ static inline int do_ksu_handle_execveat_sucompat(int *fd, const char *filename,
  // fd, filename, argv, envp, flags and retval were NOT provided in bprm_committed_creds (KSU_COMPAT_NO_POST_EXECVE_HOOK)!
  int ksu_handle_post_execve(int *fd, const char *filename, void *argv, void *envp, int *flags, int *retval)
  {
@@ -192,7 +192,7 @@ index 8dbbd847a0e059397f96351e4fef124b775b169c..78d11cb464450f78ce1e7b91e45af43c
          return -EINVAL;
      }
  #ifndef KSU_COMPAT_HAS_SUSFS_INSTALL_SU_FD_DIRECT_CALL
-@@ -436,6 +436,7 @@ static inline void ksu_handle_execveat_init(const char *filename, void *envp)
+@@ -437,6 +437,7 @@ static inline void ksu_handle_execveat_init(const char *filename, void *envp)
  int ksu_handle_execve(int *fd, const char *filename, void *argv, void *envp, int *flags)
  {
      struct ksu_sulog_pending_event *pending_root_execve = NULL;
@@ -201,7 +201,7 @@ index 8dbbd847a0e059397f96351e4fef124b775b169c..78d11cb464450f78ce1e7b91e45af43c
  #ifndef CONFIG_KSU_TRACEPOINT_HOOK
      if (ksu_is_current_proc_unprivillege()) {
 diff --git a/kernel/hook/arm64/patch_memory.c b/kernel/hook/arm64/patch_memory.c
-index 1ab6befecaad2fa0e7e3e2b0ecb249c26fe5d6f2..eb3047468497aeb6e39fd2bd9aa336c92f3ccdb8 100644
+index 1ab6befe..eb304746 100644
 --- a/kernel/hook/arm64/patch_memory.c
 +++ b/kernel/hook/arm64/patch_memory.c
 @@ -286,7 +286,7 @@ static int ksu_patch_text_nosync(void *dst, void *src, size_t len, int flags)
@@ -214,7 +214,7 @@ index 1ab6befecaad2fa0e7e3e2b0ecb249c26fe5d6f2..eb3047468497aeb6e39fd2bd9aa336c9
  
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 diff --git a/kernel/hook/setuid_hook.c b/kernel/hook/setuid_hook.c
-index 7eb2de3f5a347ed0cf91be1f074882b947da0791..9215381f234729b39e40a4a8d7cc55ddc2fde595 100644
+index 7eb2de3f..9215381f 100644
 --- a/kernel/hook/setuid_hook.c
 +++ b/kernel/hook/setuid_hook.c
 @@ -13,6 +13,8 @@
@@ -227,7 +227,7 @@ index 7eb2de3f5a347ed0cf91be1f074882b947da0791..9215381f234729b39e40a4a8d7cc55dd
  #include "policy/app_profile.h"
  #include "policy/allowlist.h"
 diff --git a/kernel/infra/symbol_resolver.c b/kernel/infra/symbol_resolver.c
-index 1fb4d7c6874c7679c29e9dd638bb2e2a6f381f49..e7fb4b7bb2e9efb495eb167b17e13ab8ffee32c5 100644
+index 1fb4d7c6..e7fb4b7b 100644
 --- a/kernel/infra/symbol_resolver.c
 +++ b/kernel/infra/symbol_resolver.c
 @@ -26,8 +26,13 @@ static const size_t cfi_suffix_len = sizeof(cfi_suffix) - 1;
@@ -263,7 +263,7 @@ index 1fb4d7c6874c7679c29e9dd638bb2e2a6f381f49..e7fb4b7bb2e9efb495eb167b17e13ab8
      struct ksu_lookup_symbol_ctx ctx = {
          .symbol_name = symbol_name,
 diff --git a/kernel/manager/throne_tracker.h b/kernel/manager/throne_tracker.h
-index 49c02e2110855e79d2516e384c9031c0f173ec62..24d20da1af6217225f6ef3fdbadcd7e8db68e647 100644
+index 49c02e21..24d20da1 100644
 --- a/kernel/manager/throne_tracker.h
 +++ b/kernel/manager/throne_tracker.h
 @@ -1,6 +1,9 @@
@@ -277,7 +277,7 @@ index 49c02e2110855e79d2516e384c9031c0f173ec62..24d20da1af6217225f6ef3fdbadcd7e8
  #define TRACK_THRONE_FROM_RENAMEAT (1 << 1)
  #define TRACK_THRONE_FORCE_SYNCHRONOUS (1 << 2)
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
-index 39334735468768a2ffcec7317530058bba46e317..0207efaf8186a36a16540ae73b5eea354f29dfd6 100644
+index 39334735..0207efaf 100644
 --- a/kernel/runtime/ksud_integration.c
 +++ b/kernel/runtime/ksud_integration.c
 @@ -1,3 +1,4 @@
@@ -330,7 +330,7 @@ index 39334735468768a2ffcec7317530058bba46e317..0207efaf8186a36a16540ae73b5eea35
  }
  
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
-index 95373100cef61ce58fd843a76ddc905921dbfa46..120f4cf102e260b83667c22996ce62d134be48d2 100644
+index 95373100..120f4cf1 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
 @@ -4,6 +4,7 @@
@@ -427,7 +427,7 @@ index 95373100cef61ce58fd843a76ddc905921dbfa46..120f4cf102e260b83667c22996ce62d1
  #endif
  
 diff --git a/kernel/supercall/supercall.c b/kernel/supercall/supercall.c
-index ca43b5a3d55a7bf751ba238dd7cfc93615813a2a..7a6d93bafd99fb84c2491a3643216e00e7286f3a 100644
+index ca43b5a3..7a6d93ba 100644
 --- a/kernel/supercall/supercall.c
 +++ b/kernel/supercall/supercall.c
 @@ -143,7 +143,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user
@@ -440,7 +440,7 @@ index ca43b5a3d55a7bf751ba238dd7cfc93615813a2a..7a6d93bafd99fb84c2491a3643216e00
  #ifdef CONFIG_KSU_TOOLKIT_SUPPORT
      if (ksu_try_handle_toolkit_cmd(magic2, cmd, arg))
 diff --git a/kernel/tools/kernel_compat.mk b/kernel/tools/kernel_compat.mk
-index 57504d06a3c2b8d8d740a1125c8087213604e3d6..3937e2dd512c8980316a6cc2c1d33f6a87084783 100644
+index dc87d993..1df5271c 100644
 --- a/kernel/tools/kernel_compat.mk
 +++ b/kernel/tools/kernel_compat.mk
 @@ -297,8 +297,9 @@ ccflags-y += -DKSU_COMPAT_HAS_UAPI_MODULE_H
@@ -455,7 +455,7 @@ index 57504d06a3c2b8d8d740a1125c8087213604e3d6..3937e2dd512c8980316a6cc2c1d33f6a
  endif
  
 diff --git a/kernel/tools/manual_hook_check.mk b/kernel/tools/manual_hook_check.mk
-index 1c58afb50b48a5963868c006b713414a17bd690d..b309e66afb7e5a626167f54adf46ab04807ffca2 100644
+index 1c58afb5..b309e66a 100644
 --- a/kernel/tools/manual_hook_check.mk
 +++ b/kernel/tools/manual_hook_check.mk
 @@ -73,8 +73,7 @@ endif

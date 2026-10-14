@@ -108,10 +108,6 @@ struct selinux_state selinux_state __rticdata;
 #else
 struct selinux_state selinux_state;
 #endif
-#ifdef CONFIG_KSU_SUSFS
-extern struct selinux_state fake_state;
-extern bool ksu_selinux_hide_running __read_mostly;
-#endif
 
 /* SECMARK reference count */
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
@@ -6382,11 +6378,6 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
 	u32 mysid = current_sid(), sid = 0, ptsid;
 	int error;
 	char *str = value;
-#ifdef CONFIG_KSU_SUSFS
-	bool should_check_current = (likely(!strcmp(name, "current") &&
-					    current_uid().val >= 10000 &&
-					    ksu_selinux_hide_running));
-#endif // #ifdef CONFIG_KSU_SUSFS
 
 	/*
 	 * Basic control over ability to set these attributes at all.
@@ -6422,22 +6413,6 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
 			str[size-1] = 0;
 			size--;
 		}
-#ifdef CONFIG_KSU_SUSFS
-		/*
-		 * Validate the requested context against the backup policy for
-		 * app UIDs.  The out-of-line wrapper ran its own
-		 * avc_has_perm(PROCESS__SETCURRENT) and then delegated here,
-		 * so this write performed the permission check twice; folding
-		 * the fake-state lookup into this function leaves exactly one
-		 * check on every path.
-		 */
-		if (should_check_current) {
-			u32 tmp_sid = 0;
-			int fake_error = security_context_to_sid(&fake_state, value, size, &tmp_sid, GFP_KERNEL);
-			if (fake_error)
-				return fake_error;
-		}
-#endif // #ifdef CONFIG_KSU_SUSFS
 		error = security_context_to_sid(&selinux_state, value, size,
 						&sid, GFP_KERNEL);
 		if (error == -EINVAL && !strcmp(name, "fscreate")) {

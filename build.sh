@@ -27,8 +27,8 @@ git -C "$ROOT" submodule update --init --recursive
 # ---- 2. apply the 5.4 glue to the BakaSU submodule ----------------------
 # Idempotent: skip if the submodule already carries the adaptation.
 if ! git -C "$ROOT/BakaSU" apply --reverse --check \
-        "$ROOT/kernel-patches/0001-bakasu-5b76b884-dream54-5.4.patch" 2>/dev/null; then
-    git -C "$ROOT/BakaSU" apply "$ROOT/kernel-patches/0001-bakasu-5b76b884-dream54-5.4.patch"
+        "$ROOT/kernel-patches/0001-bakasu-e1682a28-5.4-glue.patch" 2>/dev/null; then
+    git -C "$ROOT/BakaSU" apply "$ROOT/kernel-patches/0001-bakasu-e1682a28-5.4-glue.patch"
 fi
 
 # ---- 3. pin the banner's f2fs-hash --------------------------------------
