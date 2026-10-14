@@ -54,7 +54,7 @@ unset KCFLAGS KCPPFLAGS CFLAGS_KERNEL CFLAGS_MODULE
 # ---- 5. configure --------------------------------------------------------
 mkdir -p "$OUT"
 [ -e "$OUT/.config" ] || cp "$BASE_CONFIG" "$OUT/.config"
-"$ROOT/scripts/config" --file "$OUT/.config" --set-str LOCALVERSION "$(read_recipe localversion)"
+"$ROOT/scripts/config" --file "$OUT/.config" --set-str LOCALVERSION "$(read_recipe banner.localversion)"
 "$ROOT/scripts/config" --file "$OUT/.config" --disable LOCALVERSION_AUTO
 "$ROOT/scripts/config" --file "$OUT/.config" \
     --enable KSU --enable KSU_SUSFS \
@@ -77,7 +77,7 @@ for o in CFI_CLANG SHADOW_CALL_STACK MODVERSIONS SECURITY_SELINUX KSU KSU_SUSFS;
     grep -Fxq "CONFIG_${o}=y" "$OUT/.config" || { echo "MISSING CONFIG_${o}=y" >&2; exit 3; }
 done
 grep -q "^CONFIG_STACKPROTECTOR_PER_TASK=y" "$OUT/.config" && { echo "STACKPROTECTOR_PER_TASK leaked" >&2; exit 4; }
-grep -Fxq "CONFIG_LOCALVERSION=\"$(read_recipe localversion)\"" "$OUT/.config" || { echo "LOCALVERSION wrong" >&2; exit 5; }
+grep -Fxq "CONFIG_LOCALVERSION=\"$(read_recipe banner.localversion)\"" "$OUT/.config" || { echo "LOCALVERSION wrong" >&2; exit 5; }
 
 # ---- 7. build ------------------------------------------------------------
 make -C "$ROOT" O="$OUT" "${ARGS[@]}" \

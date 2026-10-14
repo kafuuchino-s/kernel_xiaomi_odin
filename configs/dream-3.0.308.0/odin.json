@@ -1,5 +1,5 @@
 {
-  "_comment": "Complete, reproducible build recipe for one ROM+device pair. Every value here is either frozen by the stock ROM (must not change) or verified against a recorded build. See README.md.",
+  "_comment": "Complete, reproducible build recipe for one ROM+device pair. Every value here is either frozen by the stock ROM (must not change) or verified against a recorded build. See README.md. This is the SOURCE-SIDE recipe (how to build this ROM's kernel). The delivery-side record (release manifest + userspace config) lives in the private maintenance repo; overlap between the two is intentional.",
 
   "model": "odin",
   "device": "Xiaomi MIX 4",
@@ -9,10 +9,18 @@
   "android_version": "android16",
   "kernel_version": "5.4.259",
 
-  "banner": "5.4.259-qgki-g8cc268997371",
-  "localversion": "-qgki-g8cc268997371",
-  "localversion_auto": false,
-  "uts_version": "#1 SMP PREEMPT Mon Dec 8 17:59:01 UTC 2025 f2fs-hash:f7f0f9542b0",
+  "banner": {
+    "uts_release": "5.4.259-qgki-g8cc268997371",
+    "localversion": "-qgki-g8cc268997371",
+    "localversion_auto": false,
+    "uts_version": "#1 SMP PREEMPT Mon Dec 8 17:59:01 UTC 2025 f2fs-hash:f7f0f9542b0",
+    "KBUILD_BUILD_USER": "builder",
+    "KBUILD_BUILD_HOST": "pangu-build-component-vendor-768032-ft8tz-6b0r9-25xx6",
+    "KBUILD_BUILD_TIMESTAMP": "Mon Dec 8 17:59:01 UTC 2025",
+    "KBUILD_BUILD_VERSION": "1",
+    "KBUILD_BUILD_F2FS_HASH": "f7f0f9542b0",
+    "note": "Frozen by the stock ROM. Every value must reproduce byte-for-byte: uname -r / uname -v are world-readable and are a detection surface. KBUILD_BUILD_F2FS_HASH is only honoured because scripts/mkcompile_h was patched in this tree; without that patch the hash is computed from our f2fs sources and comes out as c38b0fe53dd instead of f7f0f9542b0."
+  },
 
   "build_env": {
     "KBUILD_BUILD_USER": "builder",
@@ -47,14 +55,17 @@
   "bakasu": "5b76b884c75f729a220bb317aa4a4fc78f0e0e9c",
   "bakasu_version": "35222 / UAPI 5 (v4.2.0-rc3-51-g5b76b884)",
   "bakasu_url": "https://github.com/Baka-SU/BakaSU",
-  "bakasu_integration": "kernel-work/parallel/root-uapi5/0001-full-bakasu35222-dream54-susfs.patch (5.4 glue)",
-  "bakasu_integrated_tree": "ffafed5b393f2b5f06ec30eb5a125fba9c8e970a",
+  "bakasu_submodule_path": "BakaSU",
+  "bakasu_integration": "kernel-patches/0001-bakasu-5b76b884-dream54-5.4.patch (the 5.4 glue; 15 files, +63/-129)",
+  "bakasu_integrated_tree": "849f0a2e7a031f17e0e18e3b71e827c20c4a6d87",
+  "bakasu_integrated_tree_note": "Tree hash of the BakaSU submodule after applying kernel-patches/0001. Upstream 5b76b884 alone does not build on 5.4.",
 
   "susfs": "9892175b4acec7ee844e113b8d02c0f4d12cdfac",
   "susfs_version": "2.3.0",
   "susfs_url": "https://gitlab.com/simonpunk/susfs4ksu.git",
   "susfs_branch": "gki-android12-5.10",
-  "susfs_note": "Upstream has no 5.4 branch (kernel-5.4 stopped 2025-02-23). The 5.4 port is hand-backported and committed in-tree as fs/susfs.c + include/linux/susfs{,def}.h; the submodule is a reference only.",
+  "susfs_submodule_path": "susfs4ksu",
+  "susfs_note": "Reference only. Upstream has no 5.4 branch (kernel-5.4 stopped 2025-02-23), so the working 5.4 SUSFS is hand-backported and committed in-tree as fs/susfs.c + include/linux/susfs{,def}.h. The submodule is kept for diffing against upstream, not for building.",
 
   "config_preserved": [
     "CFI_CLANG",
@@ -78,7 +89,7 @@
 
   "rom_source": {
     "package": "(纯净版)MIX4_OS3.0.308.0_16.0_追梦_0f1d2876.zip",
-    "package_sha256": "UNVERIFIED",
+    "package_sha256": "88bb8cf3e638bc930cd87ae6eb8b549a85a02c552951ff5c34daccea3f73c1ee",
     "images_sha256": {
       "boot.img": "67e8d17e20db8a7645e33b44b380ea420e09977292119b3fe1344ecb77d03526",
       "vendor_boot.img": "344568dd0c262138abb7926d20c6d1c28ade7323f36ddd2fc56b236e57243e07",
