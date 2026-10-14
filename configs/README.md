@@ -39,6 +39,5 @@ kernel tree: the tree is what you build, `configs/` is how you build it.
 
 ## Not in here
 
-Nothing in `configs/` describes detection or anti-detection behaviour. The
-recipe is only about reproducing a kernel image that matches the stock ROM's
-observable surface, which is a prerequisite for anything else.
+The recipe is only about reproducing a kernel image whose observable surface
+matches the stock ROM, which is a prerequisite for anything else.

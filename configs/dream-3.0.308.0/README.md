@@ -4,7 +4,7 @@ One directory per ROM release: `configs/<rom>/<device>.json`.
 
 Each file is a **complete, reproducible recipe** for building this kernel against
 one ROM + device pair: every frozen value (banner, build env, toolchain, ABI gate)
-plus the pinned Root/SUSFS commits. Nothing here is detection-related.
+plus the pinned Root/SUSFS commits.
 
 ```
 configs/

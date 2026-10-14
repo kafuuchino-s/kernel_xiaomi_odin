@@ -19,7 +19,7 @@
     "KBUILD_BUILD_TIMESTAMP": "Mon Dec 8 17:59:01 UTC 2025",
     "KBUILD_BUILD_VERSION": "1",
     "KBUILD_BUILD_F2FS_HASH": "f7f0f9542b0",
-    "note": "Frozen by the stock ROM. Every value must reproduce byte-for-byte: uname -r / uname -v are world-readable and are a detection surface. KBUILD_BUILD_F2FS_HASH is only honoured because scripts/mkcompile_h was patched in this tree; without that patch the hash is computed from our f2fs sources and comes out as c38b0fe53dd instead of f7f0f9542b0."
+    "note": "Frozen by the stock ROM. Every value must reproduce byte-for-byte: uname -r / uname -v are world-readable and part of the observable interface. KBUILD_BUILD_F2FS_HASH is only honoured because scripts/mkcompile_h was patched in this tree; without that patch the hash is computed from our f2fs sources and comes out as c38b0fe53dd instead of f7f0f9542b0."
   },
 
   "build_env": {
