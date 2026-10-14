@@ -754,14 +754,14 @@ void susfs_set_uname(void __user **user_info) {
 
 	write_seqlock(&susfs_uname_seqlock);
 	if (!strcmp(info.release, "default")) {
-		strscpy(my_uname.release, utsname()->release, __NEW_UTS_LEN);
+		strscpy(my_uname.release, utsname()->release, sizeof(my_uname.release));
 	} else {
-		strscpy(my_uname.release, info.release, __NEW_UTS_LEN);
+		strscpy(my_uname.release, info.release, sizeof(my_uname.release));
 	}
 	if (!strcmp(info.version, "default")) {
-		strscpy(my_uname.version, utsname()->version, __NEW_UTS_LEN);
+		strscpy(my_uname.version, utsname()->version, sizeof(my_uname.version));
 	} else {
-		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
+		strscpy(my_uname.version, info.version, sizeof(my_uname.version));
 	}
 	write_sequnlock(&susfs_uname_seqlock);
 
@@ -784,8 +784,8 @@ void susfs_spoof_uname(struct new_utsname* tmp) {
 
 	do {
 		seq = read_seqbegin(&susfs_uname_seqlock);
-		strscpy(tmp->release, my_uname.release, __NEW_UTS_LEN);
-		strscpy(tmp->version, my_uname.version, __NEW_UTS_LEN);
+		strscpy(tmp->release, my_uname.release, sizeof(tmp->release));
+		strscpy(tmp->version, my_uname.version, sizeof(tmp->version));
 	} while (read_seqretry(&susfs_uname_seqlock, seq));
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
