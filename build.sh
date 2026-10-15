@@ -14,6 +14,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="${1:-$ROOT/out}"
+# Resolve relative paths: the reproducibility check below compares against
+# $ROOT, so "./build.sh out" must become an absolute path before it runs.
+OUT="$(realpath -m "$OUT")"
 RECIPE="$ROOT/configs/dream-3.0.308.0/odin.json"
 BASE_CONFIG="${BASE_CONFIG:-$ROOT/configs/dream-3.0.308.0/baseline.config}"
 
@@ -27,8 +30,8 @@ git -C "$ROOT" submodule update --init --recursive
 # ---- 2. apply the 5.4 glue to the BakaSU submodule ----------------------
 # Idempotent: skip if the submodule already carries the adaptation.
 if ! git -C "$ROOT/BakaSU" apply --reverse --check \
-        "$ROOT/kernel-patches/0001-bakasu-e1682a28-5.4-glue.patch" 2>/dev/null; then
-    git -C "$ROOT/BakaSU" apply "$ROOT/kernel-patches/0001-bakasu-e1682a28-5.4-glue.patch"
+        "$ROOT/kernel-patches/0001-bakasu-08966cd0-5.4-glue.patch" 2>/dev/null; then
+    git -C "$ROOT/BakaSU" apply "$ROOT/kernel-patches/0001-bakasu-08966cd0-5.4-glue.patch"
 fi
 
 # ---- 3. pin the banner's f2fs-hash --------------------------------------
@@ -96,12 +99,19 @@ grep -Fxq "CONFIG_LOCALVERSION=\"$(read_recipe banner.localversion)\"" "$OUT/.co
 #     kbuild sets srctree=".." and passes "../init/calibrate.c", which is the
 #     same string wherever the tree lives.
 #   * Output path. Once OUT is inside the tree, its path relative to the tree is
-#     what gets recorded, so the directory *name* matters too. Mapping it
-#     removes that.
+#     what gets recorded, so the directory *name* matters too.
 #
-# Hence both mappings below. KAFLAGS as well as KCFLAGS, because assembly does
-# not go through KBUILD_CFLAGS and the assembler embeds its source path too (it
-# shows up as the arch/arm64/kernel/entry.S string in Image).
+# Note which map actually does the work. clang keeps the prefix maps in a
+# std::map and takes the first match in lexicographic key order, and a prefix
+# always sorts before its own extensions - so when OUT is nested in ROOT the
+# ROOT map wins and the OUT map never fires. What ends up in the objects is
+# "/build/src" plus OUT's path relative to ROOT. That is why the OUT *name*,
+# not the OUT location, is what has to agree between two builds: the check
+# below enforces the location, the warning after it covers the name.
+#
+# KAFLAGS as well as KCFLAGS, because assembly does not go through KBUILD_CFLAGS
+# and the assembler embeds its source path too (it shows up as the
+# arch/arm64/kernel/entry.S string in Image).
 case "$OUT/" in
     "$ROOT"/*) : ;;
     *) echo "OUT must be inside the source tree for a reproducible build." >&2
@@ -110,6 +120,15 @@ case "$OUT/" in
        echo "An out-of-tree O= makes clang embed absolute source paths in section names." >&2
        exit 7 ;;
 esac
+
+# The ROOT map outranks a nested OUT map (see above), so the output directory's
+# name is part of the recorded build path and two builds agree only when the
+# names agree. Warn rather than fail: the build is still valid on this machine.
+if [ "$(basename "$OUT")" != out ]; then
+    echo "WARNING: OUT is named '$(basename "$OUT")', not 'out'." >&2
+    echo "  This Image will not be byte-identical to one built into a directory" >&2
+    echo "  with a different name. Reproducibility requires OUT to be 'out'." >&2
+fi
 
 PREFIX_MAPS="-fdebug-prefix-map=$OUT=/build/out -ffile-prefix-map=$OUT=/build/out"
 PREFIX_MAPS="$PREFIX_MAPS -fdebug-prefix-map=$ROOT=/build/src -ffile-prefix-map=$ROOT=/build/src"

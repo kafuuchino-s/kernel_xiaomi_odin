@@ -2,10 +2,10 @@
 
 Two things the build needs that upstream does not provide.
 
-## `0001-bakasu-5b76b884-dream54-5.4.patch` — the 5.4 glue
+## `0001-bakasu-08966cd0-5.4-glue.patch` — the 5.4 glue
 
 BakaSU upstream targets newer kernels. At the commit this ROM pins
-(`5b76b884c75f729a220bb317aa4a4fc78f0e0e9c`, version 35222 / UAPI 5) it does not
+(`08966cd0574d898a678a9bbe9a3ea0270e71ea6e`, sync-susfs tip) it does not
 build on 5.4. This patch is the adaptation, and **the build does not work without
 it** — `build.sh` applies it to the `BakaSU` submodule before compiling.
 
@@ -22,7 +22,7 @@ kernel/hook/setuid_hook.c          kernel/infra/symbol_resolver.c
 kernel/manager/throne_tracker.h
 ```
 
-Applying it yields BakaSU tree `849f0a2e7a031f17e0e18e3b71e827c20c4a6d87`.
+Applying it yields a BakaSU tree that builds on 5.4.
 
 ### What in here is load-bearing
 

@@ -52,23 +52,23 @@
   "reproducibility": {
     "required": true,
     "note": "The Image must be byte-identical wherever the tree and the output directory live. Without this, a hash recorded in a release manifest cannot be reproduced from a fresh clone.",
-    "mechanism": "clang leaks the build location twice: it records the compile working directory in every object (feeding the ThinLTO module hash), and it writes the source path exactly as given into the object's section names. Prefix maps rewrite the first but not the second, so what decides whether two builds agree is whether those strings are equal. With the output directory inside the tree, kbuild sets srctree=\"..\" and passes a relative source path, identical everywhere; build.sh then maps both the tree root and the output directory to fixed strings with -fdebug-prefix-map and -ffile-prefix-map, on KAFLAGS as well as KCFLAGS because assembly does not pass through KBUILD_CFLAGS.",
-    "constraint": "OUT must be inside the tree. An out-of-tree O= always passes absolute source paths and cannot be made reproducible with this toolchain; build.sh refuses it rather than producing a hash that only matches on one machine.",
-    "verify": "Build the same commit from two different tree paths into two differently-named output directories; Image and Module.symvers sha256 must match."
+    "mechanism": "clang leaks the build location twice: it records the compile working directory in every object (that is the DW_AT_comp_dir of assembly, and it feeds the ThinLTO module hash), and it writes the source path exactly as given into the object's section names. Prefix maps rewrite the first but not the second, so what decides whether two builds agree is whether those two strings are equal. With the output directory inside the tree, kbuild sets srctree=\"..\" and passes a relative source path, which is identical wherever the tree lives. That leaves the compile directory. build.sh maps both the tree root and the output directory with -fdebug-prefix-map and -ffile-prefix-map, on KAFLAGS as well as KCFLAGS because assembly does not pass through KBUILD_CFLAGS. NOTE: when OUT is nested in ROOT the ROOT map always wins - clang keeps the maps in a std::map and takes the first match in lexicographic key order, and a prefix always sorts before its extensions - so the effective string is /build/src plus OUT's path relative to ROOT. The OUT map is therefore dead code, and it is OUT's NAME that has to agree, not merely its location. This was verified end to end: exp-C/out and exp-D/out produced byte-identical Images, while exp-D/out1 did not.",
+    "constraint": "The tree may live at any path, but the output directory name must be identical across builds (use 'out'). clang's prefix-map matching ignores argument order: when OUT is nested inside ROOT, the ROOT rule always wins because a parent path sorts before its own extension, so the OUT rule is dead and the output directory name leaks into vDSO objects as '<ROOT-mapped>/<OUT-name>'. Two trees with the same OUT directory name therefore produce identical strings and identical Images; a different OUT name does not. Separately, OUT must be inside the tree: an out-of-tree O= was measured to fail as well, because it passes absolute source paths that no prefix map can repair (3900 of 3921 objects differed, 2026-10-15).",
+    "verify": "Build the same commit from two different tree paths into two output directories with the SAME name (out); Image and Module.symvers sha256 must match. Differently-named output directories do NOT reproduce - see constraint."
   },
 
   "base_commit": "05d251c8fc35d26e0f3143da56c3990c66f53303",
   "base_upstream": "Inkypen79/kernel_xiaomi_odin lineage-19.1 (Linux 5.4.259)",
 
-  "bakasu": "5b76b884c75f729a220bb317aa4a4fc78f0e0e9c",
-  "bakasu_version": "35222 / UAPI 5 (v4.2.0-rc3-51-g5b76b884)",
+  "bakasu": "08966cd0574d898a678a9bbe9a3ea0270e71ea6e",
+  "bakasu_version": "35231 / UAPI 5 (v4.2.0-rc3-60-g08966cd0)",
   "bakasu_url": "https://github.com/Baka-SU/BakaSU",
   "bakasu_submodule_path": "BakaSU",
-  "bakasu_integration": "kernel-patches/0001-bakasu-5b76b884-dream54-5.4.patch (the 5.4 glue; 15 files, +63/-129)",
-  "bakasu_integrated_tree": "849f0a2e7a031f17e0e18e3b71e827c20c4a6d87",
-  "bakasu_integrated_tree_note": "Tree hash of the BakaSU submodule after applying kernel-patches/0001. Upstream 5b76b884 alone does not build on 5.4.",
+  "bakasu_integration": "kernel-patches/0001-bakasu-08966cd0-5.4-glue.patch (the 5.4 glue; 15 files, +79/-133)",
+  "bakasu_integrated_tree": "bcd55fa8190efc4e98ea9782661b46f2b5215142",
+  "bakasu_integrated_tree_note": "Tree hash of the BakaSU submodule after applying kernel-patches/0001. Upstream 08966cd0 alone does not build on 5.4.",
 
-  "susfs": "9892175b4acec7ee844e113b8d02c0f4d12cdfac",
+  "susfs": "82f08351fadb8b19dd6591bd14634d02ad832145",
   "susfs_version": "2.3.0",
   "susfs_url": "https://gitlab.com/simonpunk/susfs4ksu.git",
   "susfs_branch": "gki-android12-5.10",

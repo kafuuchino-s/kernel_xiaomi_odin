@@ -151,7 +151,7 @@ index 15e34108..ab005061 100644
      synchronize_rcu();
  
 diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
-index 549c42a5..23bc83bc 100644
+index fcd665d7..efd11bc8 100644
 --- a/kernel/feature/selinux_hide.c
 +++ b/kernel/feature/selinux_hide.c
 @@ -444,7 +444,7 @@ extern setprocattr_fn ksu_orig_setprocattr;
@@ -163,6 +163,36 @@ index 549c42a5..23bc83bc 100644
  #else
  int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
  #endif
+@@ -1283,15 +1283,24 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
+     rc = string_to_context_struct(policydb, orig_policydb, sidtab, orig_sidtab, scontext2, scontext3, scontext_len,
+                                   &context, &orig_context, def_sid, &orig_rc);
+     if (!rc) {
+-        rc = sidtab_context_to_sid(sidtab, &context, sid);
++#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
++        rc = context_add_hash(policydb, &context);
++#endif
++        if (!rc)
++            rc = sidtab_context_to_sid(sidtab, &context, sid);
+         // rc should not be frozen
+         context_destroy(&context);
+         // removed: if (rc == -ESTALE)
+         if (!orig_rc) {
+-            // sync to global sidtab
+-            orig_rc = sidtab_context_to_sid(orig_sidtab, &orig_context, &orig_sid);
+-            if (orig_sid_p)
+-                *orig_sid_p = orig_sid;
++#ifdef KSU_COMPAT_HAS_CONTEXT_ADD_HASH
++            orig_rc = context_add_hash(orig_policydb, &orig_context);
++#endif
++            if (!orig_rc) {
++                // sync to global sidtab
++                orig_rc = sidtab_context_to_sid(orig_sidtab, &orig_context, &orig_sid);
++                if (orig_sid_p)
++                    *orig_sid_p = orig_sid;
++            }
+             context_destroy(&orig_context);
+         }
+     }
 diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
 index 42e01ebf..6e4b71a7 100644
 --- a/kernel/feature/sucompat.c
@@ -440,7 +470,7 @@ index ca43b5a3..7a6d93ba 100644
  #ifdef CONFIG_KSU_TOOLKIT_SUPPORT
      if (ksu_try_handle_toolkit_cmd(magic2, cmd, arg))
 diff --git a/kernel/tools/kernel_compat.mk b/kernel/tools/kernel_compat.mk
-index dc87d993..1df5271c 100644
+index dc87d993..3644aad3 100644
 --- a/kernel/tools/kernel_compat.mk
 +++ b/kernel/tools/kernel_compat.mk
 @@ -297,8 +297,9 @@ ccflags-y += -DKSU_COMPAT_HAS_UAPI_MODULE_H
@@ -454,6 +484,17 @@ index dc87d993..1df5271c 100644
  ccflags-y += -DKSU_COMPAT_NO_POST_EXECVE_HOOK
  endif
  
+@@ -331,3 +332,10 @@ ifeq ($(shell grep -q -F "rc = mls_context_to_sid(pol, oldc, p, ctx, sidtabp, de
+ $(info -- $(REPO_NAME)/compat: stricter mls_context_to_sid found)
+ ccflags-y += -DKSU_COMPAT_HAS_STRICTER_MLS_CONTEXT_TO_SID
+ endif
++
++# Google's backport
++# https://android-review.googlesource.com/q/Iead2a1d90731ae24fefec2a40af5ffdc457ac916
++ifeq ($(shell grep -q "^int context_add_hash" $(srctree)/security/selinux/ss/services.c 2>/dev/null; echo $$?),0)
++$(info -- $(REPO_NAME)/compat: found hash indexed sidtab)
++ccflags-y += -DKSU_COMPAT_HAS_CONTEXT_ADD_HASH
++endif
 diff --git a/kernel/tools/manual_hook_check.mk b/kernel/tools/manual_hook_check.mk
 index 1c58afb5..b309e66a 100644
 --- a/kernel/tools/manual_hook_check.mk
