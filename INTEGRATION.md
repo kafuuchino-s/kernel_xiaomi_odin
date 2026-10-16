@@ -76,8 +76,7 @@ python3 tools/mix4/audit_abi.py out/Module.symvers /path/to/vendor_symbols > /tm
 `vendor_symbols` is an input directory generated or extracted from the target
 ROM's vendor modules: one `.versions` import-CRC file and matching `.exports`
 export-name file per module. These ROM-specific inputs are not part of this
-source repository. The current build container has a prepared copy at
-`/donor/vendor`, which can replace `/path/to/vendor_symbols` in the command.
+source repository.
 The tool also provides `python3 tools/mix4/audit_abi.py --self-test`.
 
 ## Upstream changes
