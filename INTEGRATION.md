@@ -66,9 +66,19 @@ When updating either fork, commit the gitlink and matching recipe pin together.
 Confirm the effective patched source still matches the validated release before
 a full build. Accept the build after an ABI audit reports 114/114 QGKI modules,
 `module_layout` CRC `0x894a26ae`, zero import mismatches, zero unresolved symbols
-and zero duplicate exports. The maintenance workflow supplies the audit scripts
-and matching vendor evidence. Device validation and release records belong to
-that workflow as well.
+and zero duplicate exports. Run the repository's audit tool from the kernel
+root after building:
+
+```bash
+python3 tools/mix4/audit_abi.py out/Module.symvers /path/to/vendor_symbols > /tmp/qgki-audit.json
+```
+
+`vendor_symbols` is an input directory generated or extracted from the target
+ROM's vendor modules: one `.versions` import-CRC file and matching `.exports`
+export-name file per module. These ROM-specific inputs are not part of this
+source repository. The current build container has a prepared copy at
+`/donor/vendor`, which can replace `/path/to/vendor_symbols` in the command.
+The tool also provides `python3 tools/mix4/audit_abi.py --self-test`.
 
 ## Upstream changes
 

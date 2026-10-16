@@ -60,14 +60,14 @@
   "base_commit": "05d251c8fc35d26e0f3143da56c3990c66f53303",
   "base_upstream": "Inkypen79/kernel_xiaomi_odin lineage-19.1 (Linux 5.4.259)",
 
-  "bakasu": "3acfa1d8f4b312e404b1801934aa3bf291327bde",
+  "bakasu": "1744c140a08b233daf3b71801994b9b197318ef0",
   "bakasu_version": "35231 / UAPI 5 (v4.2.0-rc3-60-g08966cd0)",
   "bakasu_url": "https://github.com/kafuuchino-s/BakaSU.git",
   "bakasu_branch": "mix4-5.4",
   "bakasu_upstream": "08966cd0574d898a678a9bbe9a3ea0270e71ea6e",
   "bakasu_submodule_path": "BakaSU",
   "bakasu_integration": "5.4 glue committed in the pinned BakaSU fork; no build-time BakaSU patch",
-  "bakasu_integrated_tree": "bd52641eb316ebd3bb5838614697f5f01535fac9",
+  "bakasu_integrated_tree": "9b33b5644138877bcdefbfc35f7b53c0e15f8316",
   "bakasu_integrated_tree_note": "Pinned BakaSU fork tree with the existing 5.4 glue and frozen Kbuild version values. Effective code, flags and object order match the validated port.",
 
   "susfs": "4e26d7a8b2edab5329e504b9d4a6090c68088b66",
@@ -95,7 +95,7 @@
     "require_import_mismatches": 0,
     "require_unresolved": 0,
     "require_duplicate_exports": 0,
-    "audit_tool": "kernel/build/audit_abi.py",
+    "audit_tool": "tools/mix4/audit_abi.py",
     "audit_input": "vendor-qgki-symbols/ (114 .exports files)"
   },
 

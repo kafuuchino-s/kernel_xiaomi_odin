@@ -30,7 +30,7 @@ kernel tree: the tree is what you build, `configs/` is how you build it.
 4. **Re-audit the ABI before building.** The 114 QGKI modules come from the ROM's
    `vendor` partition, so a new ROM means a new ABI surface:
    ```
-   python3 <maintenance>/kernel/build/audit_abi.py <out>/Module.symvers <vendor-qgki-symbols>
+   python3 tools/mix4/audit_abi.py <out>/Module.symvers <target-ROM-vendor-symbols>
    ```
    Expect 114/114 modules, `module_layout` 0x894a26ae, and zero mismatches,
    unresolved symbols and duplicate exports. If `module_layout` moved, the new
