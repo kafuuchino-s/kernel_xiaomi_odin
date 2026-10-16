@@ -1,5 +1,5 @@
 {
-  "_comment": "Complete, reproducible build recipe for one ROM+device pair. Every value here is either frozen by the stock ROM (must not change) or verified against a recorded build. See README.md. This is the SOURCE-SIDE recipe (how to build this ROM's kernel). Device/userspace configuration belongs in the maintenance configuration repository; artifact and validation records are managed outside the public source forks.",
+  "_comment": "Complete, reproducible build recipe for one ROM+device pair. Every value here is either frozen by the stock ROM (must not change) or verified against a recorded build. See README.md. This is the SOURCE-SIDE recipe (how to build this ROM's kernel). Device/userspace configuration and the current boot backup are kept locally, outside the public source forks.",
 
   "model": "odin",
   "device": "Xiaomi MIX 4",
