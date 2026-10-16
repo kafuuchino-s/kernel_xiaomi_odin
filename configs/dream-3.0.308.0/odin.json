@@ -70,11 +70,11 @@
   "bakasu_integrated_tree": "9b33b5644138877bcdefbfc35f7b53c0e15f8316",
   "bakasu_integrated_tree_note": "Pinned BakaSU fork tree with the existing 5.4 glue and frozen Kbuild version values. Effective code, flags and object order match the validated port.",
 
-  "susfs": "4e26d7a8b2edab5329e504b9d4a6090c68088b66",
+  "susfs": "eccb934588c76f1d7cb880be11eda11633fa5c56",
   "susfs_version": "2.3.0",
   "susfs_url": "https://github.com/kafuuchino-s/susfs4ksu.git",
   "susfs_branch": "mix4-5.4",
-  "susfs_upstream": "82f08351fadb8b19dd6591bd14634d02ad832145",
+  "susfs_upstream": "ca7093a1a26f7911987110c34a1352d74cfb1d09",
   "susfs_series": "patches/5.4/2.3.0/series",
   "susfs_submodule_path": "susfs4ksu",
   "susfs_note": "The pinned fork maintains the existing 2.3.0 backport. build.sh applies susfs_series to the kernel before configuration; the series is required for building.",

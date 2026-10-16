@@ -63,8 +63,10 @@ Use `bash -n build.sh` for the shell entry point and
 The latter uses synthetic repositories and does not compile the kernel.
 
 When updating either fork, commit the gitlink and matching recipe pin together.
-Confirm the effective patched source still matches the validated release before
-a full build. Accept the build after an ABI audit reports 114/114 QGKI modules,
+Review the effective patched source against the currently validated build and
+identify the intended code changes. Reuse existing build and ABI evidence when
+all compilation inputs are unchanged; otherwise use incremental builds before
+one full build. Accept the build after an ABI audit reports 114/114 QGKI modules,
 `module_layout` CRC `0x894a26ae`, zero import mismatches, zero unresolved symbols
 and zero duplicate exports. Run the repository's audit tool from the kernel
 root after building:
@@ -81,9 +83,15 @@ The tool also provides `python3 tools/mix4/audit_abi.py --self-test`.
 
 ## Upstream changes
 
-This branch reorganizes the existing Dream 3.0.308.0 port. Its upstream anchors
-remain kernel `05d251c8fc35d26e0f3143da56c3990c66f53303`, BakaSU
+Track the latest commits on kernel `lineage-19.1`, BakaSU `sync-susfs` and
+SUSFS `gki-android12-5.10`. Merge upstream into each fork's `mix4-5.4` branch
+and adapt interface changes to Linux 5.4 before updating the kernel pins.
+When a fix already has an equivalent implementation, record the mapping in
+the port documentation and retain the upstream merge history.
+
+The current upstream pins are kernel
+`05d251c8fc35d26e0f3143da56c3990c66f53303`, BakaSU
 `08966cd0574d898a678a9bbe9a3ea0270e71ea6e` and SUSFS
-`82f08351fadb8b19dd6591bd14634d02ad832145` (2.3.0). Fork commits package the
-existing adaptations; changing these upstream versions requires a separate
-port and validation.
+`ca7093a1a26f7911987110c34a1352d74cfb1d09` (2.3.0). The recipe records
+the fork commits used by the build. Changes to compiled code require the
+corresponding build and ABI checks, and device validation before a release tag.
