@@ -16,6 +16,9 @@
 #include <linux/syscore_ops.h>
 #include <linux/clocksource.h>
 #include <linux/jiffies.h>
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include <linux/pkg_stat.h>
+#endif
 #include <linux/time.h>
 #include <linux/timex.h>
 #include <linux/tick.h>
@@ -2197,6 +2200,10 @@ void do_timer(unsigned long ticks)
 {
 	jiffies_64 += ticks;
 	calc_global_load(ticks);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* Called with jiffies_lock held: pass its value without a seq-read retry. */
+	package_runtime_monitor(jiffies_64);
+#endif
 }
 
 /**

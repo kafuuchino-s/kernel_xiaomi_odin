@@ -233,3 +233,5 @@ source "drivers/counter/Kconfig"
 source "drivers/uwb-sr100/Kconfig"
 
 endmenu
+
+source "drivers/kernelsu/Kconfig"

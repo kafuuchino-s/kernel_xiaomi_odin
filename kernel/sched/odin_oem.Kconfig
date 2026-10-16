@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menu "Dream MIX 4 OEM task support"
+
+config PACKAGE_RUNTIME_INFO
+	bool "Three-cluster package runtime accounting"
+	depends on SMP && SCHED_WALT && PROC_FS
+	help
+	  Restore the Dream task/UID accounting layout, scheduler hooks and proc
+	  interface. This changes the exported task type, so vendor ABI must be
+	  checked with the target ROM configuration.
+
+config MIGT
+	bool "Dream MIGT frame policy and GLK"
+	depends on PACKAGE_RUNTIME_INFO && CPU_FREQ && CPU_FREQ_GOV_SCHEDUTIL
+	help
+	  Build the frame-policy device, scheduler and game-load frequency logic
+	  into the kernel. This port does not support module unload.
+
+config PERF_CRITICAL_RT_TASK
+	bool "Dream critical-RT task bookkeeping"
+	depends on SMP
+	help
+	  Retain the original critical_rt_task field and fork initialization.
+	  Binder priority hint behavior requires separate runtime verification.
+
+config SF_BINDER
+	bool "Dream SurfaceFlinger task bookkeeping"
+	depends on SMP
+	help
+	  Retain the original sf_binder_task field and fork initialization.
+	  Binder priority hint behavior requires separate runtime verification.
+
+endmenu

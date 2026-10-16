@@ -1179,6 +1179,16 @@ static int longpress_kthread(void *_pon)
 	return 0;
 }
 
+/* OEM registration ABI, matching the original odin setter and sm8350-miui. */
+typedef int (*mi_display_pm_suspend_callback)(void);
+mi_display_pm_suspend_callback mi_display_cb;
+
+void mi_display_pm_suspend_callback_set(mi_display_pm_suspend_callback cb)
+{
+	WRITE_ONCE(mi_display_cb, cb);
+}
+EXPORT_SYMBOL(mi_display_pm_suspend_callback_set);
+
 static irqreturn_t qpnp_kpdpwr_irq(int irq, void *_pon)
 {
 	int rc;

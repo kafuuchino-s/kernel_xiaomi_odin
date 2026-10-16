@@ -23,8 +23,12 @@ if [ -r $TARGET -a ! -O include/generated/autoconf.h ]; then
 fi
 
 echo $PWD
-F2FS_HASH=$(sha1sum source/fs/f2fs/[[:lower:]]* source/include/linux/f2fs_fs.h\
-	| awk '{print $1}' | sha1sum | awk '{print $1}')
+if [ -n "$KBUILD_BUILD_F2FS_HASH" ]; then
+	F2FS_HASH="$KBUILD_BUILD_F2FS_HASH"
+else
+	F2FS_HASH=$(sha1sum source/fs/f2fs/[[:lower:]]* source/include/linux/f2fs_fs.h\
+		| awk '{print $1}' | sha1sum | awk '{print $1}')
+fi
 echo "f2fs-hash:"$F2FS_HASH
 # Do not expand names
 set -f

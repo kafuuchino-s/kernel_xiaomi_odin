@@ -41,6 +41,7 @@
 #include "objsec.h"
 #include "conditional.h"
 
+
 enum sel_inos {
 	SEL_ROOT_INO = 2,
 	SEL_LOAD,	/* load policy */
@@ -221,7 +222,6 @@ static int sel_open_handle_status(struct inode *inode, struct file *filp)
 {
 	struct selinux_fs_info *fsi = file_inode(filp)->i_sb->s_fs_info;
 	struct page    *status = selinux_kernel_status_page(fsi->state);
-
 	if (!status)
 		return -ENOMEM;
 
@@ -229,6 +229,7 @@ static int sel_open_handle_status(struct inode *inode, struct file *filp)
 
 	return 0;
 }
+
 
 static ssize_t sel_read_handle_status(struct file *filp, char __user *buf,
 				      size_t count, loff_t *ppos)
@@ -596,7 +597,6 @@ static ssize_t sel_write_context(struct file *file, char *buf, size_t size)
 	char *canon = NULL;
 	u32 sid, len;
 	ssize_t length;
-
 	length = avc_has_perm(&selinux_state,
 			      current_sid(), SECINITSID_SECURITY,
 			      SECCLASS_SECURITY, SECURITY__CHECK_CONTEXT, NULL);
@@ -624,6 +624,7 @@ out:
 	kfree(canon);
 	return length;
 }
+
 
 static ssize_t sel_read_checkreqprot(struct file *filp, char __user *buf,
 				     size_t count, loff_t *ppos)
@@ -765,7 +766,6 @@ static ssize_t sel_write_create(struct file *file, char *buf, size_t size);
 static ssize_t sel_write_relabel(struct file *file, char *buf, size_t size);
 static ssize_t sel_write_user(struct file *file, char *buf, size_t size);
 static ssize_t sel_write_member(struct file *file, char *buf, size_t size);
-
 static ssize_t (*const write_op[])(struct file *, char *, size_t) = {
 	[SEL_ACCESS] = sel_write_access,
 	[SEL_CREATE] = sel_write_create,
@@ -818,7 +818,6 @@ static ssize_t sel_write_access(struct file *file, char *buf, size_t size)
 	u16 tclass;
 	struct av_decision avd;
 	ssize_t length;
-
 	length = avc_has_perm(&selinux_state,
 			      current_sid(), SECINITSID_SECURITY,
 			      SECCLASS_SECURITY, SECURITY__COMPUTE_AV, NULL);
@@ -859,6 +858,7 @@ out:
 	kfree(scon);
 	return length;
 }
+
 
 static ssize_t sel_write_create(struct file *file, char *buf, size_t size)
 {

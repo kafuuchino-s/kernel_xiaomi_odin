@@ -17,6 +17,10 @@
 #include <linux/cn_proc.h>
 #include <linux/uidgid.h>
 
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include "sched/pkg.h"
+#endif
+
 #if 0
 #define kdebug(FMT, ...)						\
 	printk("[%-5.5s%5u] " FMT "\n",					\
@@ -435,6 +439,10 @@ int commit_creds(struct cred *new)
 {
 	struct task_struct *task = current;
 	const struct cred *old = task->real_cred;
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	bool pkg_attached = false;
+	unsigned long pkg_flags = 0;
+#endif
 
 	kdebug("commit_creds(%p{%d,%d})", new,
 	       atomic_read(&new->usage),
@@ -484,8 +492,27 @@ int commit_creds(struct cred *new)
 	alter_cred_subscribers(new, 2);
 	if (new->user != old->user)
 		atomic_inc(&new->user->processes);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	/* Readers finish on the old list before objective credentials change. */
+	if (new->user != old->user) {
+		pkg_attached = pkg_task_detach(task, old->user);
+		/* IRQ/WALT may refill old-UID stats after list removal. Close that
+		 * interval, clear again, and publish both cred pointers together.
+		 * Never acquire a user/list lock while this task lock is held.
+		 */
+		write_lock_irqsave(&task->pkg.lock, pkg_flags);
+		pkg_task_clear_policy_locked(task);
+	}
+#endif
 	rcu_assign_pointer(task->real_cred, new);
 	rcu_assign_pointer(task->cred, new);
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	if (new->user != old->user)
+		write_unlock_irqrestore(&task->pkg.lock, pkg_flags);
+	/* Do not publish a task which was not registered (e.g. boot idle). */
+	if (pkg_attached)
+		pkg_task_attach(task, new->user);
+#endif
 	if (new->user != old->user)
 		atomic_dec(&old->user->processes);
 	alter_cred_subscribers(old, -2);

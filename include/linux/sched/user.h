@@ -7,38 +7,42 @@
 #include <linux/refcount.h>
 #include <linux/ratelimit.h>
 #include <linux/android_kabi.h>
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+#include <linux/pkg_stat.h>
+#endif
 
-/*
- * Some day this will be a full-fledged user tracking system..
- */
 struct user_struct {
-	refcount_t __count;	/* reference count */
-	atomic_t processes;	/* How many processes does this user have? */
-	atomic_t sigpending;	/* How many pending signals does this user have? */
+	refcount_t __count;	
+	atomic_t processes;	
+	atomic_t sigpending;	
 #ifdef CONFIG_FANOTIFY
 	atomic_t fanotify_listeners;
 #endif
 #ifdef CONFIG_EPOLL
-	atomic_long_t epoll_watches; /* The number of file descriptors currently watched */
+	atomic_long_t epoll_watches; 
 #endif
 #ifdef CONFIG_POSIX_MQUEUE
-	/* protected by mq_lock	*/
-	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
+	
+	unsigned long mq_bytes;	
 #endif
-	unsigned long locked_shm; /* How many pages of mlocked shm ? */
-	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
-	atomic_long_t pipe_bufs;  /* how many pages are allocated in pipe buffers */
+	unsigned long locked_shm; 
+	unsigned long unix_inflight;	
+	atomic_long_t pipe_bufs;  
 
-	/* Hash table maintenance information */
+	
 	struct hlist_node uidhash_node;
 	kuid_t uid;
+
+#ifdef CONFIG_PACKAGE_RUNTIME_INFO
+	struct package_runtime_info pkg;
+#endif
 
 #if defined(CONFIG_PERF_EVENTS) || defined(CONFIG_BPF_SYSCALL) || \
     defined(CONFIG_NET) || defined(CONFIG_IO_URING)
 	atomic_long_t locked_vm;
 #endif
 
-	/* Miscellaneous per-user rate limit */
+	
 	struct ratelimit_state ratelimit;
 
 	ANDROID_KABI_RESERVE(1);
@@ -53,7 +57,7 @@ extern struct user_struct root_user;
 #define INIT_USER (&root_user)
 
 
-/* per-UID process charging. */
+
 extern struct user_struct * alloc_uid(kuid_t);
 static inline struct user_struct *get_uid(struct user_struct *u)
 {
@@ -62,4 +66,4 @@ static inline struct user_struct *get_uid(struct user_struct *u)
 }
 extern void free_uid(struct user_struct *);
 
-#endif /* _LINUX_SCHED_USER_H */
+#endif 

@@ -650,6 +650,24 @@ static int to_kernel_prio(int policy, int user_priority)
 		return MAX_USER_RT_PRIO - 1 - user_priority;
 }
 
+#if defined(CONFIG_PERF_CRITICAL_RT_TASK) || defined(CONFIG_SF_BINDER)
+/* Dream stock Binder-open classifications; fields belong to the group leader. */
+static void binder_set_oem_task_flags(struct task_struct *task)
+{
+	task_lock(task);
+#ifdef CONFIG_PERF_CRITICAL_RT_TASK
+	if (!strncmp(task->comm, "com.miui.home", sizeof("com.miui.home") - 1) ||
+	    !strncmp(task->comm, "ndroid.systemui", sizeof("ndroid.systemui") - 1))
+		WRITE_ONCE(task->critical_rt_task, 1);
+#endif
+#ifdef CONFIG_SF_BINDER
+	if (!strncmp(task->comm, "surfaceflinger", sizeof("surfaceflinger") - 1))
+		WRITE_ONCE(task->sf_binder_task, 1);
+#endif
+	task_unlock(task);
+}
+#endif
+
 static void binder_do_set_priority(struct binder_thread *thread,
 				   const struct binder_priority *desired,
 				   bool verify)
@@ -674,12 +692,19 @@ static void binder_do_set_priority(struct binder_thread *thread,
 	if (verify && is_rt_policy(policy) && !has_cap_nice) {
 		long max_rtprio = task_rlimit(task, RLIMIT_RTPRIO);
 
-		if (max_rtprio == 0) {
-			policy = SCHED_NORMAL;
-			priority = MIN_NICE;
-		} else if (priority > max_rtprio) {
-			priority = max_rtprio;
+#ifdef CONFIG_PERF_CRITICAL_RT_TASK
+		/* Stock critical leaders bypass only Binder's RT rlimit clamp. */
+		if (!READ_ONCE(task->group_leader->critical_rt_task)) {
+#endif
+			if (max_rtprio == 0) {
+				policy = SCHED_NORMAL;
+				priority = MIN_NICE;
+			} else if (priority > max_rtprio) {
+				priority = max_rtprio;
+			}
+#ifdef CONFIG_PERF_CRITICAL_RT_TASK
 		}
+#endif
 	}
 
 	if (verify && is_fair_policy(policy) && !has_cap_nice) {
@@ -3184,8 +3209,10 @@ static void binder_transaction(struct binder_proc *proc,
 		t->priority.sched_policy = current->policy;
 		t->priority.prio = current->normal_prio;
 	} else {
-		/* Otherwise, fall back to the default priority */
+		/* Pair with SF updates; release inner_lock before any priority setter. */
+		binder_inner_proc_lock(target_proc);
 		t->priority = target_proc->default_priority;
+		binder_inner_proc_unlock(target_proc);
 	}
 
 	if (target_node && target_node->txn_security_ctx) {
@@ -4363,6 +4390,9 @@ static int binder_thread_read(struct binder_proc *proc,
 
 	int ret = 0;
 	int wait_for_proc_work;
+#ifdef CONFIG_SF_BINDER
+	unsigned int sf_binder_task = READ_ONCE(current->group_leader->sf_binder_task);
+#endif
 
 	if (*consumed == 0) {
 		if (put_user(BR_NOOP, (uint32_t __user *)ptr))
@@ -4381,6 +4411,8 @@ retry:
 				   !!thread->transaction_stack,
 				   !binder_worklist_empty(proc, &thread->todo));
 	if (wait_for_proc_work) {
+		struct binder_priority default_priority;
+
 		if (!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
 					BINDER_LOOPER_STATE_ENTERED))) {
 			binder_user_error("%d:%d ERROR: Thread waiting for process work before calling BC_REGISTER_LOOPER or BC_ENTER_LOOPER (state %x)\n",
@@ -4388,8 +4420,18 @@ retry:
 			wait_event_interruptible(binder_user_error_wait,
 						 binder_stop_on_user_error < 2);
 		}
+		/* Keep the stock shared SF default, publishing/snapshotting one pair. */
+		binder_inner_proc_lock(proc);
+#ifdef CONFIG_SF_BINDER
+		if (sf_binder_task) {
+			proc->default_priority.sched_policy = current->policy;
+			proc->default_priority.prio = current->normal_prio;
+		}
+#endif
+		default_priority = proc->default_priority;
+		binder_inner_proc_unlock(proc);
 		trace_android_vh_binder_restore_priority(NULL, current);
-		binder_restore_priority(thread, &proc->default_priority);
+		binder_restore_priority(thread, &default_priority);
 	}
 
 	if (non_block) {
@@ -5617,6 +5659,10 @@ static int binder_open(struct inode *nodp, struct file *filp)
 		proc->default_priority.sched_policy = SCHED_NORMAL;
 		proc->default_priority.prio = NICE_TO_PRIO(0);
 	}
+
+#if defined(CONFIG_PERF_CRITICAL_RT_TASK) || defined(CONFIG_SF_BINDER)
+	binder_set_oem_task_flags(proc->tsk);
+#endif
 
 	/* binderfs stashes devices in i_private */
 	if (is_binderfs_device(nodp)) {

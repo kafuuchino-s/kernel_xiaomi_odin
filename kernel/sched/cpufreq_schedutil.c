@@ -9,6 +9,9 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include "sched.h"
+#ifdef CONFIG_MIGT
+#include "odin_glk.h"
+#endif
 
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
@@ -304,6 +307,15 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	else
 		freq = map_util_freq(util, freq, max);
 
+#ifdef CONFIG_MIGT
+	/* Apply GLK before raw-frequency cache/driver resolution. */
+	{
+		unsigned long game_freq = glk_cal_freq(policy, util, max);
+		if (game_freq)
+			freq = game_freq;
+		glk_freq_limit(policy, &freq);
+	}
+#endif
 	trace_sugov_next_freq(policy->cpu, util, max, freq);
 	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
 		return sg_policy->next_freq;

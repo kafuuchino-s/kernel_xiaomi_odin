@@ -1,5 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 TECHPACK?=y
 
-techpack-dirs := $(shell find $(srctree)/techpack -maxdepth 1 -mindepth 1 -type d -not -name ".*")
-obj-${TECHPACK} += stub/ $(addsuffix /,$(subst $(srctree)/techpack/,,$(techpack-dirs)))
+# Fixed order, NOT $(shell find ...). find returns directories in ext4 readdir
+# order, which depends on the filesystem directory hash seed, so it differs
+# between machines. That order becomes the member order of techpack/built-in.a,
+# which propagates into vmlinux.o and then the Image, so two machines building
+# the same source produced different bytes. This list is the order
+# dream-3.0.308.0-r2 was built with; keeping it explicit is what makes that
+# release reproducible from the source anywhere.
+techpack-dirs := video camera datarmnet-ext audio display dataipa datarmnet
+
+obj-${TECHPACK} += stub/ $(addsuffix /,$(techpack-dirs))
