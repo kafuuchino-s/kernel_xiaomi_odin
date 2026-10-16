@@ -1,0 +1,114 @@
+{
+  "_comment": "Complete, reproducible build recipe for one ROM+device pair. Every value here is either frozen by the stock ROM (must not change) or verified against a recorded build. See README.md. This is the SOURCE-SIDE recipe (how to build this ROM's kernel). Device/userspace configuration belongs in the maintenance configuration repository; artifact and validation records are managed outside the public source forks.",
+
+  "model": "odin",
+  "device": "Xiaomi MIX 4",
+  "soc": "sm8350",
+  "rom": "dream-3.0.308.0",
+  "rom_full_name": "Dream OS3.0.308.0 (HyperOS, Android 16)",
+  "android_version": "android16",
+  "kernel_version": "5.4.259",
+
+  "banner": {
+    "uts_release": "5.4.259-qgki-g8cc268997371",
+    "localversion": "-qgki-g8cc268997371",
+    "localversion_auto": false,
+    "uts_version": "#1 SMP PREEMPT Mon Dec 8 17:59:01 UTC 2025 f2fs-hash:f7f0f9542b0",
+    "KBUILD_BUILD_USER": "builder",
+    "KBUILD_BUILD_HOST": "pangu-build-component-vendor-768032-ft8tz-6b0r9-25xx6",
+    "KBUILD_BUILD_TIMESTAMP": "Mon Dec 8 17:59:01 UTC 2025",
+    "KBUILD_BUILD_VERSION": "1",
+    "KBUILD_BUILD_F2FS_HASH": "f7f0f9542b0",
+    "note": "Frozen by the stock ROM. Every value must reproduce byte-for-byte: uname -r / uname -v are world-readable and part of the observable interface. KBUILD_BUILD_F2FS_HASH is only honoured because scripts/mkcompile_h was patched in this tree; without that patch the hash is computed from our f2fs sources and comes out as c38b0fe53dd instead of f7f0f9542b0."
+  },
+
+  "build_env": {
+    "KBUILD_BUILD_USER": "builder",
+    "KBUILD_BUILD_HOST": "pangu-build-component-vendor-768032-ft8tz-6b0r9-25xx6",
+    "KBUILD_BUILD_TIMESTAMP": "Mon Dec 8 17:59:01 UTC 2025",
+    "KBUILD_BUILD_VERSION": "1",
+    "KBUILD_BUILD_F2FS_HASH": "f7f0f9542b0"
+  },
+
+  "compiler": {
+    "id": "Android (6877366 based on r383902b1) clang version 11.0.2",
+    "source": "https://android.googlesource.com/toolchain/llvm-project b397f81060ce6d701042b782172ed13bee898b79",
+    "path": "/clang/bin",
+    "docker_volume": "mix4-clang11"
+  },
+
+  "make_args": [
+    "ARCH=arm64",
+    "CC=clang",
+    "HOSTCC=clang",
+    "LLVM=1",
+    "LLVM_IAS=1",
+    "CROSS_COMPILE=aarch64-linux-gnu-",
+    "CONFIG_DISPLAY_BUILD=m"
+  ],
+  "kbuild_kcflags": "-Wno-error -Werror=incompatible-pointer-types",
+  "targets": ["Image", "modules"],
+
+  "reproducibility": {
+    "required": true,
+    "note": "The Image must be byte-identical wherever the tree and the output directory live. Without this, a hash recorded in a release manifest cannot be reproduced from a fresh clone.",
+    "mechanism": "clang leaks the build location twice: it records the compile working directory in every object (that is the DW_AT_comp_dir of assembly, and it feeds the ThinLTO module hash), and it writes the source path exactly as given into the object's section names. Prefix maps rewrite the first but not the second, so what decides whether two builds agree is whether those two strings are equal. With the output directory inside the tree, kbuild sets srctree=\"..\" and passes a relative source path, which is identical wherever the tree lives. That leaves the compile directory. build.sh maps both the tree root and the output directory with -fdebug-prefix-map and -ffile-prefix-map, on KAFLAGS as well as KCFLAGS because assembly does not pass through KBUILD_CFLAGS. NOTE: when OUT is nested in ROOT the ROOT map always wins - clang keeps the maps in a std::map and takes the first match in lexicographic key order, and a prefix always sorts before its extensions - so the effective string is /build/src plus OUT's path relative to ROOT. The OUT map is therefore dead code, and it is OUT's NAME that has to agree, not merely its location. This was verified end to end: exp-C/out and exp-D/out produced byte-identical Images, while exp-D/out1 did not.",
+    "constraint": "The tree may live at any path, but the output directory name must be identical across builds (use 'out'). clang's prefix-map matching ignores argument order: when OUT is nested inside ROOT, the ROOT rule always wins because a parent path sorts before its own extension, so the OUT rule is dead and the output directory name leaks into vDSO objects as '<ROOT-mapped>/<OUT-name>'. Two trees with the same OUT directory name therefore produce identical strings and identical Images; a different OUT name does not. Separately, OUT must be inside the tree: an out-of-tree O= was measured to fail as well, because it passes absolute source paths that no prefix map can repair (3900 of 3921 objects differed, 2026-10-15).",
+    "verify": "Build the same commit from two different tree paths into two output directories with the SAME name (out); Image and Module.symvers sha256 must match. Differently-named output directories do NOT reproduce - see constraint."
+  },
+
+  "base_commit": "05d251c8fc35d26e0f3143da56c3990c66f53303",
+  "base_upstream": "Inkypen79/kernel_xiaomi_odin lineage-19.1 (Linux 5.4.259)",
+
+  "bakasu": "3acfa1d8f4b312e404b1801934aa3bf291327bde",
+  "bakasu_version": "35231 / UAPI 5 (v4.2.0-rc3-60-g08966cd0)",
+  "bakasu_url": "https://github.com/kafuuchino-s/BakaSU.git",
+  "bakasu_branch": "mix4-5.4",
+  "bakasu_upstream": "08966cd0574d898a678a9bbe9a3ea0270e71ea6e",
+  "bakasu_submodule_path": "BakaSU",
+  "bakasu_integration": "5.4 glue committed in the pinned BakaSU fork; no build-time BakaSU patch",
+  "bakasu_integrated_tree": "bd52641eb316ebd3bb5838614697f5f01535fac9",
+  "bakasu_integrated_tree_note": "Pinned BakaSU fork tree with the existing 5.4 glue and frozen Kbuild version values. Effective code, flags and object order match the validated port.",
+
+  "susfs": "4e26d7a8b2edab5329e504b9d4a6090c68088b66",
+  "susfs_version": "2.3.0",
+  "susfs_url": "https://github.com/kafuuchino-s/susfs4ksu.git",
+  "susfs_branch": "mix4-5.4",
+  "susfs_upstream": "82f08351fadb8b19dd6591bd14634d02ad832145",
+  "susfs_series": "patches/5.4/2.3.0/series",
+  "susfs_submodule_path": "susfs4ksu",
+  "susfs_note": "The pinned fork maintains the existing 2.3.0 backport. build.sh applies susfs_series to the kernel before configuration; the series is required for building.",
+
+  "config_preserved": [
+    "CFI_CLANG",
+    "CFI_CLANG_SHADOW",
+    "SHADOW_CALL_STACK",
+    "MODVERSIONS",
+    "MODULES",
+    "SECURITY_SELINUX",
+    "KALLSYMS_ALL"
+  ],
+
+  "abi_gate": {
+    "module_layout_crc": "0x894a26ae",
+    "qgki_modules": 114,
+    "require_import_mismatches": 0,
+    "require_unresolved": 0,
+    "require_duplicate_exports": 0,
+    "audit_tool": "kernel/build/audit_abi.py",
+    "audit_input": "vendor-qgki-symbols/ (114 .exports files)"
+  },
+
+  "rom_source": {
+    "package": "(纯净版)MIX4_OS3.0.308.0_16.0_追梦_0f1d2876.zip",
+    "package_sha256": "88bb8cf3e638bc930cd87ae6eb8b549a85a02c552951ff5c34daccea3f73c1ee",
+    "images_sha256": {
+      "boot.img": "67e8d17e20db8a7645e33b44b380ea420e09977292119b3fe1344ecb77d03526",
+      "vendor_boot.img": "344568dd0c262138abb7926d20c6d1c28ade7323f36ddd2fc56b236e57243e07",
+      "dtbo.img": "997e6f792f0349b40c71077743c33b4876bd072a0d692781325200f92e0b9d76",
+      "super.img": "8a6b9c4e40de5ce6ae33e0edc3482db85eb18faf7fada05636f33bdb3e622fd9"
+    },
+    "stock_config_sha256": "3559fa0c38be86237b49062449aeb746f08fda45678ca8330d1f76dddf31fff5",
+    "stock_config_note": "Extracted from boot.img IKCONFIG; byte-identical to device /proc/config.gz"
+  }
+}

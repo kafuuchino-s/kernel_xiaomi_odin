@@ -36,6 +36,7 @@
 *.o
 *.o.*
 *.patch
+
 *.s
 *.so
 *.so.dbg
@@ -90,6 +91,8 @@ modules.order
 !.get_maintainer.ignore
 !.gitattributes
 !.gitignore
+!.gitmodules
+!.scmversion
 !.mailmap
 
 #
@@ -153,3 +156,6 @@ arch/*/configs/vendor/*_defconfig
 # vendor device tree directories
 arch/arm64/boot/dts/vendor
 #arch/arm/boot/dts/vendor
+
+# Build output (build.sh requires OUT inside the tree for reproducibility)
+/out/

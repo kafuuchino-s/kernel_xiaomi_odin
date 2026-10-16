@@ -1,0 +1,8 @@
+[submodule "BakaSU"]
+	path = BakaSU
+	url = https://github.com/kafuuchino-s/BakaSU.git
+	branch = mix4-5.4
+[submodule "susfs4ksu"]
+	path = susfs4ksu
+	url = https://github.com/kafuuchino-s/susfs4ksu.git
+	branch = mix4-5.4

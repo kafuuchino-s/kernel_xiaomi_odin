@@ -1,3 +1,21 @@
+# Xiaomi MIX 4 / Dream 3.0.308.0
+
+The `mix4-5.4` branch maintains the existing Linux 5.4.259 ROM/OEM port with
+BakaSU and SUSFS supplied by pinned public forks. To build:
+
+```bash
+git clone --recurse-submodules --branch mix4-5.4 https://github.com/kafuuchino-s/kernel_xiaomi_odin.git
+cd kernel_xiaomi_odin
+export PATH=/clang/bin:$PATH  # Android clang 11.0.2 (r383902b1)
+./build.sh
+```
+
+See [INTEGRATION.md](INTEGRATION.md) for toolchain requirements, source
+ownership, SUSFS patch application and validation. The ROM recipe and frozen
+banner are in [configs/dream-3.0.308.0](configs/dream-3.0.308.0/README.md).
+
+---
+
 # How do I submit patches to Android Common Kernels
 
 1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
